@@ -1,0 +1,2 @@
+[build]
+  publish = "UPLOAD_THIS_TO_NETLIFY"

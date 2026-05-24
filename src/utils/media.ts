@@ -1,5 +1,7 @@
 import type { AtlasMedia } from '../types/models';
 
+const MAX_VIDEO_BYTES = 8 * 1024 * 1024;
+
 export interface MediaPick {
   type: AtlasMedia['type'];
   file: File;
@@ -49,6 +51,10 @@ export function compressImage(file: File): Promise<string> {
 }
 
 export function videoToData(file: File): Promise<string> {
+  if (file.size > MAX_VIDEO_BYTES) {
+    const mb = Math.round((file.size / 1024 / 1024) * 10) / 10;
+    throw new Error(`Video "${file.name}" is ${mb} MB. Keep videos under 8 MB so Firebase storage stays healthy.`);
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = event => resolve(String(event.target?.result || ''));

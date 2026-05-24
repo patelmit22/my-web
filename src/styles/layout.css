@@ -113,5 +113,5 @@
   .board{grid-template-columns:1fr;gap:0.8rem}
   .col{min-height:auto}
   .games-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .game-detail-hero{grid-template-columns:1fr}
 }
-

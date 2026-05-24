@@ -60,6 +60,9 @@ export interface Game {
   platform?: string;
   status: GameStatus;
   cover?: string;
+  url?: string;
+  story?: string;
+  media?: AtlasMedia[];
   now?: boolean;
   c1?: string;
   c2?: string;

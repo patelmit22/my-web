@@ -28,6 +28,7 @@ import {
   renderAtlasPage,
   renderEntriesList,
   renderFinancePage,
+  renderGameMediaPreviews,
   renderGamesPage,
   renderHomePage,
   renderMediaPreviews,
@@ -111,6 +112,7 @@ export class DashboardApp {
     document.addEventListener('change', event => {
       const target = event.target as HTMLInputElement;
       if (target.id === 'm-efiles') this.handleMediaFiles(target.files);
+      if (target.id === 'm-gfiles') this.handleGameMediaFiles(target.files);
     });
   }
 
@@ -165,6 +167,7 @@ export class DashboardApp {
         qs<HTMLSelectElement>('#m-kcol').value = (target.dataset.col as WorkColumn) || 'todo';
         break;
       case 'open-game-modal':
+        this.resetGameModal();
         openModal('modal-game');
         break;
       case 'close-modal':
@@ -225,6 +228,17 @@ export class DashboardApp {
       case 'game-filter':
         state.gameFilter = target.dataset.filter as typeof state.gameFilter;
         this.renderApp();
+        break;
+      case 'open-game-detail':
+        state.selectedGameId = target.dataset.id || null;
+        this.renderApp();
+        openModal('modal-game-detail');
+        break;
+      case 'choose-game-media':
+        qs<HTMLInputElement>('#m-gfiles').click();
+        break;
+      case 'remove-game-media':
+        this.removeGameMedia(Number(target.dataset.index || 0));
         break;
       case 'save-game':
         await this.saveGame();
@@ -350,6 +364,27 @@ export class DashboardApp {
     if (previews) previews.innerHTML = renderMediaPreviews(state);
   }
 
+  private resetGameModal(): void {
+    releasePicks(state.gameMediaPicks);
+    state.gameMediaPicks = [];
+    this.renderApp();
+  }
+
+  private handleGameMediaFiles(files: FileList | null): void {
+    if (!files) return;
+    Array.from(files).slice(0, 12 - state.gameMediaPicks.length).forEach(file => state.gameMediaPicks.push(fileToPick(file)));
+    const previews = document.getElementById('m-gprev');
+    if (previews) previews.innerHTML = renderGameMediaPreviews(state);
+    qs<HTMLInputElement>('#m-gfiles').value = '';
+  }
+
+  private removeGameMedia(index: number): void {
+    URL.revokeObjectURL(state.gameMediaPicks[index]?.prev);
+    state.gameMediaPicks.splice(index, 1);
+    const previews = document.getElementById('m-gprev');
+    if (previews) previews.innerHTML = renderGameMediaPreviews(state);
+  }
+
   private async saveAtlasEntry(): Promise<void> {
     const title = formValue(document, '#m-et');
     const body = formValue(document, '#m-eb');
@@ -398,23 +433,40 @@ export class DashboardApp {
   private async saveGame(): Promise<void> {
     const name = formValue(document, '#m-gname');
     if (!name) return this.toast.show('add a name', 'err');
+    const button = qs<HTMLButtonElement>('#m-gsave');
+    button.disabled = true;
     const palette = [['#7c3aed', '#22d3ee'], ['#f472b6', '#7c3aed'], ['#22c55e', '#0ea5e9'], ['#f59e0b', '#ef4444'], ['#06b6d4', '#3b82f6']];
     const colors = palette[Math.floor(Math.random() * palette.length)];
-    const game: Game = {
-      id: `g_${Date.now()}`,
-      name,
-      platform: qs<HTMLSelectElement>('#m-gplat').value,
-      status: qs<HTMLSelectElement>('#m-gstatus').value as GameStatus,
-      cover: formValue(document, '#m-gcover'),
-      now: checked(document, '#m-gnow'),
-      c1: colors[0],
-      c2: colors[1],
-      date: new Date().toISOString(),
-      by: state.currentUser!.role
-    };
-    await saveGameApi(game, state.games);
-    closeModal('modal-game');
-    this.toast.show('added', 'ok');
+    try {
+      const media = await serializeMedia(state.gameMediaPicks, label => { button.textContent = label; });
+      button.textContent = 'saving...';
+      const game: Game = {
+        id: `g_${Date.now()}`,
+        name,
+        platform: qs<HTMLSelectElement>('#m-gplat').value,
+        status: qs<HTMLSelectElement>('#m-gstatus').value as GameStatus,
+        cover: formValue(document, '#m-gcover'),
+        url: formValue(document, '#m-gurl'),
+        story: formValue(document, '#m-gstory'),
+        media,
+        now: checked(document, '#m-gnow'),
+        c1: colors[0],
+        c2: colors[1],
+        date: new Date().toISOString(),
+        by: state.currentUser!.role
+      };
+      await saveGameApi(game, state.games);
+      releasePicks(state.gameMediaPicks);
+      state.gameMediaPicks = [];
+      closeModal('modal-game');
+      this.toast.show('game added ✓', 'ok');
+    } catch (error) {
+      console.error('game save failed', error);
+      this.toast.show(`game did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'add game';
+    }
   }
 
   private async saveHer(): Promise<void> {

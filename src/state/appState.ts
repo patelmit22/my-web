@@ -9,6 +9,8 @@ export interface AppState {
   selectedMood: string;
   txnType: Transaction['type'];
   mediaPicks: MediaPick[];
+  gameMediaPicks: MediaPick[];
+  selectedGameId: string | null;
   lightboxUrls: string[];
   lightboxIndex: number;
   herConfig: HerConfig | null;
@@ -26,6 +28,8 @@ export const state: AppState = {
   selectedMood: '',
   txnType: 'in',
   mediaPicks: [],
+  gameMediaPicks: [],
+  selectedGameId: null,
   lightboxUrls: [],
   lightboxIndex: 0,
   herConfig: null,

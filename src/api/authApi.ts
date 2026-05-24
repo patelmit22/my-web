@@ -1,10 +1,11 @@
+import type firebase from 'firebase/compat/app';
 import type { CurrentUser } from '../types/models';
 import { ownerDisplay, ownerEmail } from '../config/firebase';
-import { auth, firebase } from './firebaseClient';
+import { auth, firebase as firebaseCompat } from './firebaseClient';
 import { getHerConfig } from './databaseApi';
 
 export async function configureAuthPersistence(): Promise<void> {
-  await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+  await auth.setPersistence(firebaseCompat.auth.Auth.Persistence.LOCAL);
 }
 
 export async function signIn(email: string, password: string): Promise<void> {

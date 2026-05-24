@@ -938,26 +938,31 @@ async function enterApp(){
     entries.sort((a,b)=>new Date(b.date)-new Date(a.date));
     renderEntries();
     updateTiles();
-  });
+  }, e => showDataError('Atlas entries', e));
   db.ref('txns').on('value', snap => {
     txns = [];
     snap.forEach(c => txns.push(c.val()));
     txns.sort((a,b)=>new Date(b.date)-new Date(a.date));
     renderFinance();
     updateTiles();
-  });
+  }, e => showDataError('Finance', e));
   db.ref('tasks').on('value', snap => {
     tasks = [];
     snap.forEach(c => tasks.push(c.val()));
     renderBoard();
     updateTiles();
-  });
+  }, e => showDataError('Work board', e));
   db.ref('games').on('value', snap => {
     games = [];
     snap.forEach(c => games.push(c.val()));
     renderGames();
     updateTiles();
-  });
+  }, e => showDataError('Games', e));
+}
+
+function showDataError(area, error){
+  console.error(area + ' sync failed', error);
+  toast(area + ' sync failed: ' + (error && error.message ? error.message : 'check Firebase rules'), 'err');
 }
 
 function setGreeting(){
@@ -1254,12 +1259,20 @@ async function saveEntry(){
   };
   try{
     await db.ref('entries/'+entry.id).set(entry);
+    const existing = entries.findIndex(e=>String(e.id)===String(entry.id));
+    if(existing >= 0) entries.splice(existing, 1, entry);
+    else entries.unshift(entry);
+    entries.sort((a,b)=>new Date(b.date)-new Date(a.date));
+    renderEntries();
+    updateTiles();
     mediaPicks.forEach(m=>URL.revokeObjectURL(m.prev));
     mediaPicks = [];
     closeModal('modal-entry');
+    go('atlas');
     toast('saved ✓','ok');
   }catch(e){
-    toast('save failed: '+e.message,'err');
+    console.error('entry save failed', e);
+    toast('entry did not save: '+(e && e.message ? e.message : 'check Firebase rules'), 'err');
   }finally{
     btn.disabled = false;
     btn.textContent = 'save entry ✦';

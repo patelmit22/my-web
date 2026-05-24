@@ -63,7 +63,18 @@ export function renderGameDetailModal(state: AppState): string {
       </div>
       ${game.story ? `<div class="game-detail-story">${esc(game.story)}</div>` : '<div class="game-detail-empty">no story added yet.</div>'}
       ${renderGameMedia(game.media || [])}
-      <div class="detail-actions"><button class="btn-ghost" data-action="close-modal" data-modal="modal-game-detail">close</button></div>
+      <div class="game-detail-edit">
+        <div class="field"><label class="field-label">update game URL</label><input class="field-input" id="m-gd-url" value="${esc(game.url || '')}" placeholder="https://..."></div>
+        <div class="field"><label class="field-label">add or edit story</label><textarea class="field-ta game-story-ta" id="m-gd-story">${esc(game.story || '')}</textarea></div>
+        <div class="field">
+          <label class="field-label">add more photos or short videos</label>
+          <button class="media-drop" data-action="choose-game-detail-media">add media to this game</button>
+          <input type="file" id="m-gd-files" accept="image/*,video/*" multiple hidden>
+          <div class="media-help">new images compress automatically. videos must stay under 8 MB.</div>
+          <div class="mprev" id="m-gd-prev">${renderGameMediaPreviews(state)}</div>
+        </div>
+      </div>
+      <div class="detail-actions"><button class="btn-ghost" data-action="close-modal" data-modal="modal-game-detail">close</button><button class="btn-primary" id="m-gd-save" data-action="save-game-detail">save game changes</button></div>
     </div>
   </div>`;
 }

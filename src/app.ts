@@ -113,6 +113,7 @@ export class DashboardApp {
       const target = event.target as HTMLInputElement;
       if (target.id === 'm-efiles') this.handleMediaFiles(target.files);
       if (target.id === 'm-gfiles') this.handleGameMediaFiles(target.files);
+      if (target.id === 'm-gd-files') this.handleGameMediaFiles(target.files, 'm-gd-prev', 'm-gd-files');
     });
   }
 
@@ -230,6 +231,8 @@ export class DashboardApp {
         this.renderApp();
         break;
       case 'open-game-detail':
+        releasePicks(state.gameMediaPicks);
+        state.gameMediaPicks = [];
         state.selectedGameId = target.dataset.id || null;
         this.renderApp();
         openModal('modal-game-detail');
@@ -237,8 +240,14 @@ export class DashboardApp {
       case 'choose-game-media':
         qs<HTMLInputElement>('#m-gfiles').click();
         break;
+      case 'choose-game-detail-media':
+        qs<HTMLInputElement>('#m-gd-files').click();
+        break;
       case 'remove-game-media':
         this.removeGameMedia(Number(target.dataset.index || 0));
+        break;
+      case 'save-game-detail':
+        await this.saveGameDetail();
         break;
       case 'save-game':
         await this.saveGame();
@@ -370,12 +379,12 @@ export class DashboardApp {
     this.renderApp();
   }
 
-  private handleGameMediaFiles(files: FileList | null): void {
+  private handleGameMediaFiles(files: FileList | null, previewId = 'm-gprev', inputId = 'm-gfiles'): void {
     if (!files) return;
     Array.from(files).slice(0, 12 - state.gameMediaPicks.length).forEach(file => state.gameMediaPicks.push(fileToPick(file)));
-    const previews = document.getElementById('m-gprev');
+    const previews = document.getElementById(previewId);
     if (previews) previews.innerHTML = renderGameMediaPreviews(state);
-    qs<HTMLInputElement>('#m-gfiles').value = '';
+    qs<HTMLInputElement>(`#${inputId}`).value = '';
   }
 
   private removeGameMedia(index: number): void {
@@ -383,6 +392,8 @@ export class DashboardApp {
     state.gameMediaPicks.splice(index, 1);
     const previews = document.getElementById('m-gprev');
     if (previews) previews.innerHTML = renderGameMediaPreviews(state);
+    const detailPreviews = document.getElementById('m-gd-prev');
+    if (detailPreviews) detailPreviews.innerHTML = renderGameMediaPreviews(state);
   }
 
   private async saveAtlasEntry(): Promise<void> {
@@ -466,6 +477,36 @@ export class DashboardApp {
     } finally {
       button.disabled = false;
       button.textContent = 'add game';
+    }
+  }
+
+  private async saveGameDetail(): Promise<void> {
+    const game = state.games.find(item => item.id === state.selectedGameId);
+    if (!game) return this.toast.show('game not found', 'err');
+    const button = qs<HTMLButtonElement>('#m-gd-save');
+    button.disabled = true;
+    try {
+      const addedMedia = await serializeMedia(state.gameMediaPicks, label => { button.textContent = label; });
+      button.textContent = 'saving...';
+      const updated: Game = {
+        ...game,
+        url: formValue(document, '#m-gd-url'),
+        story: formValue(document, '#m-gd-story'),
+        media: [...(game.media || []), ...addedMedia]
+      };
+      await saveGameApi(updated, state.games);
+      releasePicks(state.gameMediaPicks);
+      state.gameMediaPicks = [];
+      state.selectedGameId = updated.id;
+      closeModal('modal-game-detail');
+      this.renderApp();
+      this.toast.show('game updated ✓', 'ok');
+    } catch (error) {
+      console.error('game update failed', error);
+      this.toast.show(`game did not update: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'save game changes';
     }
   }
 

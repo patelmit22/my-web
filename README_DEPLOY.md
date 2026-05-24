@@ -1,37 +1,43 @@
-# mitpatel.family dashboard deploy
+# mitpatel.family dashboard
 
-Finished dashboard file:
+This project is now a Vite + TypeScript static app.
 
-- `index.html`
+## Local development
 
-Packaged upload:
+```bash
+npm install
+npm run dev
+```
 
-- `mitpatel-family-dashboard.zip`
+## Production build
 
-## Upload to your domain
+```bash
+npm run build
+```
 
-1. Go to Netlify and open the site connected to `mitpatel.family`.
-2. Open **Deploys**.
-3. Drag the whole `index.html` file onto the deploy area, or upload `mitpatel-family-dashboard.zip`.
-4. Wait for deploy to finish.
-5. Open `https://mitpatel.family/`.
+The build output goes to `dist`.
 
-## Firebase Auth setup required
+## Netlify settings
 
-The new dashboard uses email-link sign-in.
+- Build command: `npm run build`
+- Publish directory: `dist`
+- Branch: `main`
+
+These are also configured in `netlify.toml`.
+
+## Firebase Auth
+
+The dashboard uses Firebase email/password sign-in.
 
 In Firebase console for project `our-atlas-6f5f7`:
 
 1. Go to **Authentication**.
-2. Click **Get started** if it is not enabled.
-3. Go to **Sign-in method**.
-4. Enable **Email/Password**.
-5. Turn on **Email link / passwordless sign-in**.
-6. Go to **Settings** > **Authorized domains**.
-7. Add `mitpatel.family`.
+2. Go to **Sign-in method**.
+3. Enable **Email/Password**.
+4. Create users in **Authentication** > **Users** for each person who should access the dashboard.
 
 Owner email currently built into the app:
 
 - `patelmit4127@gmail.com`
 
-After you sign in as the owner, open **Settings** inside the dashboard and add her email.
+After signing in as the owner, open **Settings** inside the dashboard and add her email so the app labels her entries as `Her`.

@@ -1,2 +1,3 @@
 [build]
-  publish = "UPLOAD_THIS_TO_NETLIFY"
+  command = "npm run build"
+  publish = "dist"

@@ -1,0 +1,70 @@
+export type UserRole = 'me' | 'her';
+
+export interface CurrentUser {
+  email: string;
+  role: UserRole;
+  display: string;
+}
+
+export interface HerConfig {
+  email: string;
+  display?: string;
+  addedBy?: string;
+  addedAt?: string;
+}
+
+export interface AtlasMedia {
+  type: 'image' | 'video';
+  data: string;
+  name?: string;
+}
+
+export interface AtlasEntry {
+  id: number;
+  who: UserRole;
+  title: string;
+  body: string;
+  thought?: string;
+  media?: AtlasMedia[];
+  mood?: string;
+  tags?: string[];
+  date: string;
+}
+
+export interface Transaction {
+  id: string;
+  type: 'in' | 'out';
+  name: string;
+  amount: number;
+  cat?: string;
+  note?: string;
+  date: string;
+  by: UserRole;
+}
+
+export type WorkColumn = 'todo' | 'doing' | 'done';
+
+export interface WorkTask {
+  id: string;
+  title: string;
+  col: WorkColumn;
+  date: string;
+  by: string;
+}
+
+export type GameStatus = 'playing' | 'finished' | 'wishlist' | 'dropped';
+
+export interface Game {
+  id: string;
+  name: string;
+  platform?: string;
+  status: GameStatus;
+  cover?: string;
+  now?: boolean;
+  c1?: string;
+  c2?: string;
+  date: string;
+  by: UserRole;
+}
+
+export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'settings';

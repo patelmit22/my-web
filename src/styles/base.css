@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;overflow-x:hidden}
+
+:root{
+  --bg-0:#06070d;
+  --bg-1:#0c0e1a;
+  --bg-2:#141729;
+  --glass:rgba(255,255,255,0.04);
+  --glass-2:rgba(255,255,255,0.07);
+  --glass-border:rgba(255,255,255,0.10);
+  --ink:#e9ecf5;
+  --ink-dim:#9aa0b8;
+  --ink-mute:#5f657f;
+  --accent:#7c5cff;
+  --accent-2:#22d3ee;
+  --accent-3:#f472b6;
+  --me:#ff6b6b;
+  --her:#22d3ee;
+  --ok:#22c55e;
+  --warn:#f59e0b;
+  --err:#ef4444;
+  --shadow-glow:0 10px 40px rgba(124,92,255,0.25);
+  --font-ui:'Space Grotesk','Inter',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-hand:'Caveat',cursive;
+  --font-story:'Lora',serif;
+}
+
+body{
+  font-family:var(--font-body);
+  background:var(--bg-0);
+  color:var(--ink);
+  min-height:100vh;
+  letter-spacing:0.01em;
+}
+
+/* Animated radial gradient backdrop — gives the "alive" feeling */
+body::before{
+  content:'';
+  position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(124,92,255,0.18), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(34,211,238,0.14), transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(244,114,182,0.06), transparent 60%),
+    linear-gradient(180deg, var(--bg-0), var(--bg-1));
+  animation: bgshift 20s ease-in-out infinite alternate;
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.045) 1px, transparent 0);
+  background-size:32px 32px;
+  mask-image:radial-gradient(circle at 50% 40%, black, transparent 80%);
+}
+@keyframes bgshift{
+  0%  {filter:hue-rotate(0deg) brightness(1)}
+  100%{filter:hue-rotate(20deg) brightness(1.05)}
+}
+
+

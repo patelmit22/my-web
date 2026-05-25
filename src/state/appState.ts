@@ -10,7 +10,10 @@ export interface AppState {
   txnType: Transaction['type'];
   mediaPicks: MediaPick[];
   gameMediaPicks: MediaPick[];
+  gameCoverPicks: MediaPick[];
+  workMediaPicks: MediaPick[];
   selectedGameId: string | null;
+  selectedTaskId: string | null;
   lightboxUrls: string[];
   lightboxIndex: number;
   herConfig: HerConfig | null;
@@ -29,7 +32,10 @@ export const state: AppState = {
   txnType: 'in',
   mediaPicks: [],
   gameMediaPicks: [],
+  gameCoverPicks: [],
+  workMediaPicks: [],
   selectedGameId: null,
+  selectedTaskId: null,
   lightboxUrls: [],
   lightboxIndex: 0,
   herConfig: null,

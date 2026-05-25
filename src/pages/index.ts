@@ -1,7 +1,7 @@
 export { renderAuthPage } from './AuthPage';
 export { renderHomePage } from './HomePage';
 export { renderFinancePage } from './FinancePage';
-export { renderWorkPage } from './WorkPage';
+export { renderWorkMediaPreviews, renderWorkPage } from './WorkPage';
 export { filteredEntries, renderAtlasPage, renderEntriesList, renderMediaPreviews } from './AtlasPage';
-export { renderGamesPage, renderGameMediaPreviews } from './GamesPage';
+export { renderGameCoverPreview, renderGamesPage, renderGameMediaPreviews } from './GamesPage';
 export { renderSettingsPage } from './SettingsPage';

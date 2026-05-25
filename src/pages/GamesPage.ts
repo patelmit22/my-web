@@ -30,7 +30,15 @@ export function renderGameModal(state: AppState): string {
       <div class="field"><label class="field-label">title</label><input class="field-input" id="m-gname"></div>
       <div class="field-row"><div class="field"><label class="field-label">platform</label><select class="field-sel" id="m-gplat"><option>PS5</option><option>PC</option><option>Switch</option><option>Xbox</option><option>Mobile</option><option>Other</option></select></div><div class="field"><label class="field-label">status</label><select class="field-sel" id="m-gstatus"><option value="playing">playing</option><option value="finished">finished</option><option value="wishlist">wishlist</option><option value="dropped">dropped</option></select></div></div>
       <div class="field"><label class="field-label">cover image URL (optional)</label><input class="field-input" id="m-gcover" placeholder="https://..."></div>
+      <div class="field">
+        <label class="field-label">or upload cover / icon</label>
+        <button class="media-drop" data-action="choose-game-cover">upload game picture</button>
+        <input type="file" id="m-gcover-file" accept="image/*" hidden>
+        <div class="media-help">uploaded cover is compressed automatically.</div>
+        <div class="mprev" id="m-gcover-prev">${renderGameCoverPreview(state)}</div>
+      </div>
       <div class="field"><label class="field-label">game / PS store / trailer URL (optional)</label><input class="field-input" id="m-gurl" placeholder="https://..."></div>
+      <div class="field"><label class="field-label">PS5 clip URLs <span style="color:var(--ink-mute);font-weight:400">(one per line, no storage used)</span></label><textarea class="field-ta clip-url-ta" id="m-gclips" placeholder="paste PS App clip links here..."></textarea></div>
       <div class="field"><label class="field-label">game story / notes</label><textarea class="field-ta game-story-ta" id="m-gstory" placeholder="write what happened, why you liked it, where you are in the story, trophies, memories..."></textarea></div>
       <div class="field">
         <label class="field-label">photos & short videos</label>
@@ -62,9 +70,19 @@ export function renderGameDetailModal(state: AppState): string {
         </div>
       </div>
       ${game.story ? `<div class="game-detail-story">${esc(game.story)}</div>` : '<div class="game-detail-empty">no story added yet.</div>'}
+      ${renderClipLinks(game.clips || [])}
       ${renderGameMedia(game.media || [])}
       <div class="game-detail-edit">
         <div class="field"><label class="field-label">update game URL</label><input class="field-input" id="m-gd-url" value="${esc(game.url || '')}" placeholder="https://..."></div>
+        <div class="field"><label class="field-label">cover image URL</label><input class="field-input" id="m-gd-cover" value="${esc(game.cover || '')}" placeholder="https://..."></div>
+        <div class="field">
+          <label class="field-label">replace cover / icon with upload</label>
+          <button class="media-drop" data-action="choose-game-detail-cover">upload game picture</button>
+          <input type="file" id="m-gd-cover-file" accept="image/*" hidden>
+          <div class="media-help">uploaded cover is compressed automatically.</div>
+          <div class="mprev" id="m-gd-cover-prev">${renderGameCoverPreview(state)}</div>
+        </div>
+        <div class="field"><label class="field-label">PS5 clip URLs <span style="color:var(--ink-mute);font-weight:400">(one per line, no storage used)</span></label><textarea class="field-ta clip-url-ta" id="m-gd-clips">${esc((game.clips || []).join('\n'))}</textarea></div>
         <div class="field"><label class="field-label">add or edit story</label><textarea class="field-ta game-story-ta" id="m-gd-story">${esc(game.story || '')}</textarea></div>
         <div class="field">
           <label class="field-label">add more photos or short videos</label>
@@ -85,6 +103,19 @@ export function renderGameMediaPreviews(state: AppState): string {
     ${pick.type === 'video' ? `<video src="${pick.prev}" muted></video>` : `<img src="${pick.prev}" alt="">`}
     <button data-action="remove-game-media" data-index="${index}">×</button>
   </div>`).join('');
+}
+
+export function renderGameCoverPreview(state: AppState): string {
+  if (!state.gameCoverPicks.length) return '';
+  return state.gameCoverPicks.map((pick, index) => `<div class="preview">
+    <img src="${pick.prev}" alt="">
+    <button data-action="remove-game-cover" data-index="${index}">×</button>
+  </div>`).join('');
+}
+
+function renderClipLinks(clips: string[]): string {
+  if (!clips.length) return '';
+  return `<div class="clip-links">${clips.map((clip, index) => `<a href="${esc(clip)}" target="_blank" rel="noopener">watch PS5 clip ${index + 1} ↗</a>`).join('')}</div>`;
 }
 
 function renderGameMedia(media: AtlasMedia[]): string {

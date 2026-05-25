@@ -48,6 +48,8 @@ export interface WorkTask {
   id: string;
   title: string;
   col: WorkColumn;
+  note?: string;
+  media?: AtlasMedia[];
   date: string;
   by: string;
 }
@@ -61,6 +63,7 @@ export interface Game {
   status: GameStatus;
   cover?: string;
   url?: string;
+  clips?: string[];
   story?: string;
   media?: AtlasMedia[];
   now?: boolean;

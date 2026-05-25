@@ -28,11 +28,13 @@ import {
   renderAtlasPage,
   renderEntriesList,
   renderFinancePage,
+  renderGameCoverPreview,
   renderGameMediaPreviews,
   renderGamesPage,
   renderHomePage,
   renderMediaPreviews,
   renderSettingsPage,
+  renderWorkMediaPreviews,
   renderWorkPage,
   renderAuthPage
 } from './pages';
@@ -114,6 +116,10 @@ export class DashboardApp {
       if (target.id === 'm-efiles') this.handleMediaFiles(target.files);
       if (target.id === 'm-gfiles') this.handleGameMediaFiles(target.files);
       if (target.id === 'm-gd-files') this.handleGameMediaFiles(target.files, 'm-gd-prev', 'm-gd-files');
+      if (target.id === 'm-gcover-file') this.handleGameCoverFiles(target.files);
+      if (target.id === 'm-gd-cover-file') this.handleGameCoverFiles(target.files, 'm-gd-cover-prev', 'm-gd-cover-file');
+      if (target.id === 'm-kfiles') this.handleWorkMediaFiles(target.files);
+      if (target.id === 'm-kd-files') this.handleWorkMediaFiles(target.files, 'm-kd-prev', 'm-kd-files');
     });
   }
 
@@ -164,6 +170,7 @@ export class DashboardApp {
         openModal('modal-txn');
         break;
       case 'open-task-modal':
+        this.resetWorkModal();
         openModal('modal-task');
         qs<HTMLSelectElement>('#m-kcol').value = (target.dataset.col as WorkColumn) || 'todo';
         break;
@@ -187,6 +194,28 @@ export class DashboardApp {
         break;
       case 'save-task':
         await this.saveWorkTask();
+        break;
+      case 'open-task-detail':
+        releasePicks(state.workMediaPicks);
+        state.workMediaPicks = [];
+        state.selectedTaskId = target.dataset.id || null;
+        this.renderApp();
+        openModal('modal-task-detail');
+        break;
+      case 'choose-work-media':
+        qs<HTMLInputElement>('#m-kfiles').click();
+        break;
+      case 'choose-work-detail-media':
+        qs<HTMLInputElement>('#m-kd-files').click();
+        break;
+      case 'remove-work-media':
+        this.removeWorkMedia(Number(target.dataset.index || 0));
+        break;
+      case 'save-task-detail':
+        await this.saveWorkTaskDetail();
+        break;
+      case 'set-task-column':
+        await updateTaskColumn(target.dataset.id || '', target.dataset.col as WorkColumn);
         break;
       case 'move-task':
         await this.moveTask(target.dataset.id || '', Number(target.dataset.dir || 0));
@@ -232,7 +261,9 @@ export class DashboardApp {
         break;
       case 'open-game-detail':
         releasePicks(state.gameMediaPicks);
+        releasePicks(state.gameCoverPicks);
         state.gameMediaPicks = [];
+        state.gameCoverPicks = [];
         state.selectedGameId = target.dataset.id || null;
         this.renderApp();
         openModal('modal-game-detail');
@@ -240,11 +271,20 @@ export class DashboardApp {
       case 'choose-game-media':
         qs<HTMLInputElement>('#m-gfiles').click();
         break;
+      case 'choose-game-cover':
+        qs<HTMLInputElement>('#m-gcover-file').click();
+        break;
       case 'choose-game-detail-media':
         qs<HTMLInputElement>('#m-gd-files').click();
         break;
+      case 'choose-game-detail-cover':
+        qs<HTMLInputElement>('#m-gd-cover-file').click();
+        break;
       case 'remove-game-media':
         this.removeGameMedia(Number(target.dataset.index || 0));
+        break;
+      case 'remove-game-cover':
+        this.removeGameCover(Number(target.dataset.index || 0));
         break;
       case 'save-game-detail':
         await this.saveGameDetail();
@@ -331,15 +371,60 @@ export class DashboardApp {
   private async saveWorkTask(): Promise<void> {
     const title = formValue(document, '#m-ktitle');
     if (!title) return this.toast.show('add a title', 'err');
-    await saveTask({
-      id: `k_${Date.now()}`,
-      title,
-      col: qs<HTMLSelectElement>('#m-kcol').value as WorkColumn,
-      date: new Date().toISOString(),
-      by: state.currentUser!.display
-    });
-    closeModal('modal-task');
-    this.toast.show('added', 'ok');
+    const button = qs<HTMLButtonElement>('#m-ksave');
+    button.disabled = true;
+    try {
+      const media = await serializeMedia(state.workMediaPicks, label => { button.textContent = label; });
+      await saveTask({
+        id: `k_${Date.now()}`,
+        title,
+        note: formValue(document, '#m-knote'),
+        media,
+        col: qs<HTMLSelectElement>('#m-kcol').value as WorkColumn,
+        date: new Date().toISOString(),
+        by: state.currentUser!.display
+      });
+      releasePicks(state.workMediaPicks);
+      state.workMediaPicks = [];
+      closeModal('modal-task');
+      this.toast.show('added', 'ok');
+    } catch (error) {
+      console.error('work save failed', error);
+      this.toast.show(`work did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'add work';
+    }
+  }
+
+  private async saveWorkTaskDetail(): Promise<void> {
+    const task = state.tasks.find(item => item.id === state.selectedTaskId);
+    if (!task) return this.toast.show('work not found', 'err');
+    const title = formValue(document, '#m-kd-title');
+    if (!title) return this.toast.show('add a title', 'err');
+    const button = qs<HTMLButtonElement>('#m-kd-save');
+    button.disabled = true;
+    try {
+      const addedMedia = await serializeMedia(state.workMediaPicks, label => { button.textContent = label; });
+      await saveTask({
+        ...task,
+        title,
+        col: qs<HTMLSelectElement>('#m-kd-col').value as WorkColumn,
+        note: formValue(document, '#m-kd-note'),
+        media: [...(task.media || []), ...addedMedia]
+      });
+      releasePicks(state.workMediaPicks);
+      state.workMediaPicks = [];
+      closeModal('modal-task-detail');
+      this.renderApp();
+      this.toast.show('work updated ✓', 'ok');
+    } catch (error) {
+      console.error('work update failed', error);
+      this.toast.show(`work did not update: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'save work changes';
+    }
   }
 
   private async moveTask(id: string, dir: number): Promise<void> {
@@ -373,10 +458,56 @@ export class DashboardApp {
     if (previews) previews.innerHTML = renderMediaPreviews(state);
   }
 
+  private resetWorkModal(): void {
+    releasePicks(state.workMediaPicks);
+    state.workMediaPicks = [];
+    this.renderApp();
+  }
+
+  private handleWorkMediaFiles(files: FileList | null, previewId = 'm-kprev', inputId = 'm-kfiles'): void {
+    if (!files) return;
+    Array.from(files)
+      .filter(file => file.type.startsWith('image/'))
+      .slice(0, 8 - state.workMediaPicks.length)
+      .forEach(file => state.workMediaPicks.push(fileToPick(file)));
+    const previews = document.getElementById(previewId);
+    if (previews) previews.innerHTML = renderWorkMediaPreviews(state);
+    qs<HTMLInputElement>(`#${inputId}`).value = '';
+  }
+
+  private removeWorkMedia(index: number): void {
+    URL.revokeObjectURL(state.workMediaPicks[index]?.prev);
+    state.workMediaPicks.splice(index, 1);
+    const previews = document.getElementById('m-kprev');
+    if (previews) previews.innerHTML = renderWorkMediaPreviews(state);
+    const detailPreviews = document.getElementById('m-kd-prev');
+    if (detailPreviews) detailPreviews.innerHTML = renderWorkMediaPreviews(state);
+  }
+
   private resetGameModal(): void {
     releasePicks(state.gameMediaPicks);
+    releasePicks(state.gameCoverPicks);
     state.gameMediaPicks = [];
+    state.gameCoverPicks = [];
     this.renderApp();
+  }
+
+  private handleGameCoverFiles(files: FileList | null, previewId = 'm-gcover-prev', inputId = 'm-gcover-file'): void {
+    if (!files?.[0]) return;
+    releasePicks(state.gameCoverPicks);
+    state.gameCoverPicks = [fileToPick(files[0])];
+    const previews = document.getElementById(previewId);
+    if (previews) previews.innerHTML = renderGameCoverPreview(state);
+    qs<HTMLInputElement>(`#${inputId}`).value = '';
+  }
+
+  private removeGameCover(index: number): void {
+    URL.revokeObjectURL(state.gameCoverPicks[index]?.prev);
+    state.gameCoverPicks.splice(index, 1);
+    const previews = document.getElementById('m-gcover-prev');
+    if (previews) previews.innerHTML = renderGameCoverPreview(state);
+    const detailPreviews = document.getElementById('m-gd-cover-prev');
+    if (detailPreviews) detailPreviews.innerHTML = renderGameCoverPreview(state);
   }
 
   private handleGameMediaFiles(files: FileList | null, previewId = 'm-gprev', inputId = 'm-gfiles'): void {
@@ -450,14 +581,16 @@ export class DashboardApp {
     const colors = palette[Math.floor(Math.random() * palette.length)];
     try {
       const media = await serializeMedia(state.gameMediaPicks, label => { button.textContent = label; });
+      const coverMedia = await serializeMedia(state.gameCoverPicks, label => { button.textContent = label; });
       button.textContent = 'saving...';
       const game: Game = {
         id: `g_${Date.now()}`,
         name,
         platform: qs<HTMLSelectElement>('#m-gplat').value,
         status: qs<HTMLSelectElement>('#m-gstatus').value as GameStatus,
-        cover: formValue(document, '#m-gcover'),
+        cover: coverMedia[0]?.data || formValue(document, '#m-gcover'),
         url: formValue(document, '#m-gurl'),
+        clips: this.parseLines(formValue(document, '#m-gclips')),
         story: formValue(document, '#m-gstory'),
         media,
         now: checked(document, '#m-gnow'),
@@ -468,7 +601,9 @@ export class DashboardApp {
       };
       await saveGameApi(game, state.games);
       releasePicks(state.gameMediaPicks);
+      releasePicks(state.gameCoverPicks);
       state.gameMediaPicks = [];
+      state.gameCoverPicks = [];
       closeModal('modal-game');
       this.toast.show('game added ✓', 'ok');
     } catch (error) {
@@ -487,16 +622,21 @@ export class DashboardApp {
     button.disabled = true;
     try {
       const addedMedia = await serializeMedia(state.gameMediaPicks, label => { button.textContent = label; });
+      const coverMedia = await serializeMedia(state.gameCoverPicks, label => { button.textContent = label; });
       button.textContent = 'saving...';
       const updated: Game = {
         ...game,
         url: formValue(document, '#m-gd-url'),
+        cover: coverMedia[0]?.data || formValue(document, '#m-gd-cover'),
+        clips: this.parseLines(formValue(document, '#m-gd-clips')),
         story: formValue(document, '#m-gd-story'),
         media: [...(game.media || []), ...addedMedia]
       };
       await saveGameApi(updated, state.games);
       releasePicks(state.gameMediaPicks);
+      releasePicks(state.gameCoverPicks);
       state.gameMediaPicks = [];
+      state.gameCoverPicks = [];
       state.selectedGameId = updated.id;
       closeModal('modal-game-detail');
       this.renderApp();
@@ -518,5 +658,9 @@ export class DashboardApp {
     if (email === state.currentUser.email) return this.toast.show("that's your own email", 'err');
     await saveHerConfig({ email, display, addedBy: state.currentUser.email, addedAt: new Date().toISOString() });
     this.toast.show('saved — she can sign in now', 'ok');
+  }
+
+  private parseLines(value: string): string[] {
+    return value.split(/\n|,/).map(line => line.trim()).filter(Boolean);
   }
 }

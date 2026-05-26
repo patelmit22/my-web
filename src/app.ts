@@ -382,7 +382,7 @@ export class DashboardApp {
       button.textContent = 'saving...';
     }
     try {
-      await saveTransaction({
+      const transaction: Transaction = {
         id: `t_${Date.now()}`,
         type: this.txnTypeForKind(kind),
         kind,
@@ -390,12 +390,13 @@ export class DashboardApp {
         amount,
         cat: optionalFormValue('#m-tcat'),
         note: optionalFormValue('#m-tnote'),
-        symbol: symbol || undefined,
-        optionType: optionType || undefined,
-        store: store || undefined,
         date: new Date().toISOString(),
         by: state.currentUser!.role
-      });
+      };
+      if (symbol) transaction.symbol = symbol;
+      if (optionType) transaction.optionType = optionType;
+      if (store) transaction.store = store;
+      await saveTransaction(transaction);
       closeModal('modal-txn');
       this.toast.show('saved ✓', 'ok');
     } catch (error) {

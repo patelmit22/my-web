@@ -37,13 +37,20 @@ export type AtlasSection = 'stories' | 'protected';
 export interface Transaction {
   id: string;
   type: 'in' | 'out';
+  kind?: FinanceKind;
   name: string;
   amount: number;
   cat?: string;
   note?: string;
+  symbol?: string;
+  optionType?: 'covered_call' | 'put';
+  store?: SubwayStore;
   date: string;
   by: UserRole;
 }
+
+export type FinanceKind = 'general' | 'option' | 'spending' | 'subway_cash' | 'subway_expense';
+export type SubwayStore = 'walmart' | 'maple_grove' | 'brooklyn_park';
 
 export type WorkColumn = 'todo' | 'doing' | 'done';
 

@@ -20,7 +20,7 @@ import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
 import { state } from './state/appState';
-import type { AtlasEntry, AtlasSection, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
+import type { AtlasEntry, AtlasSection, FinanceKind, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
 import { fileToPick, releasePicks, serializeMedia } from './utils/media';
 import {
@@ -165,7 +165,14 @@ export class DashboardApp {
         openModal('modal-entry');
         break;
       case 'open-txn-modal':
-        state.txnType = 'in';
+        state.txnKind = (target.dataset.kind as FinanceKind) || 'option';
+        state.txnType = this.txnTypeForKind(state.txnKind);
+        this.renderApp();
+        openModal('modal-txn');
+        break;
+      case 'select-txn-kind':
+        state.txnKind = target.dataset.kind as FinanceKind;
+        state.txnType = this.txnTypeForKind(state.txnKind);
         this.renderApp();
         openModal('modal-txn');
         break;
@@ -354,17 +361,32 @@ export class DashboardApp {
   }
 
   private async saveTxn(): Promise<void> {
-    const name = formValue(document, '#m-tname');
     const amount = parseFloat(formValue(document, '#m-tamt'));
-    if (!name) return this.toast.show('add a name', 'err');
     if (!amount || amount <= 0) return this.toast.show('add an amount', 'err');
+    const kind = state.txnKind;
+    const symbol = optionalFormValue('#m-tsymbol').toUpperCase();
+    const store = optionalFormValue('#m-tstore') as Transaction['store'];
+    const optionType = optionalFormValue('#m-toption') as Transaction['optionType'];
+    const fallbackName = kind === 'option'
+      ? `${symbol || 'OPTION'} ${optionType === 'put' ? 'put' : 'covered call'}`
+      : kind === 'subway_cash'
+        ? `${storeLabel(store)} cash collection`
+        : kind === 'subway_expense'
+          ? `${storeLabel(store)} expense`
+          : 'Spending';
+    const name = optionalFormValue('#m-tname') || fallbackName;
+    if (kind === 'option' && !symbol) return this.toast.show('add the stock symbol', 'err');
     await saveTransaction({
       id: `t_${Date.now()}`,
-      type: state.txnType,
+      type: this.txnTypeForKind(kind),
+      kind,
       name,
       amount,
-      cat: formValue(document, '#m-tcat'),
-      note: formValue(document, '#m-tnote'),
+      cat: optionalFormValue('#m-tcat'),
+      note: optionalFormValue('#m-tnote'),
+      symbol: symbol || undefined,
+      optionType: optionType || undefined,
+      store: store || undefined,
       date: new Date().toISOString(),
       by: state.currentUser!.role
     });
@@ -668,4 +690,19 @@ export class DashboardApp {
   private parseLines(value: string): string[] {
     return value.split(/\n|,/).map(line => line.trim()).filter(Boolean);
   }
+
+  private txnTypeForKind(kind: FinanceKind): Transaction['type'] {
+    return kind === 'spending' || kind === 'subway_expense' ? 'out' : 'in';
+  }
+}
+
+function storeLabel(store?: Transaction['store']): string {
+  if (store === 'walmart') return 'Walmart';
+  if (store === 'maple_grove') return 'Maple Grove';
+  if (store === 'brooklyn_park') return 'Brooklyn Park';
+  return 'Subway';
+}
+
+function optionalFormValue(selector: string): string {
+  return (document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector)?.value || '').trim();
 }

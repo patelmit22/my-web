@@ -1,4 +1,4 @@
-import type { AtlasEntry, AtlasSection, CurrentUser, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, FinanceKind, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
 import type { MediaPick } from '../utils/media';
 
 export interface AppState {
@@ -6,6 +6,7 @@ export interface AppState {
   activePage: PageId;
   atlasSection: AtlasSection;
   entryFilter: 'all' | 'me' | 'her';
+  txnKind: FinanceKind;
   gameFilter: 'all' | Game['status'];
   selectedMood: string;
   txnType: Transaction['type'];
@@ -29,6 +30,7 @@ export const state: AppState = {
   activePage: 'home',
   atlasSection: 'stories',
   entryFilter: 'all',
+  txnKind: 'option',
   gameFilter: 'all',
   selectedMood: '',
   txnType: 'in',

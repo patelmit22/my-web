@@ -46,7 +46,7 @@ export function renderAtlasPage(state: AppState): string {
       <div class="atlas-filter">
         ${(['all', 'me', 'her'] as const).map(filter => `<button class="gtab ${state.entryFilter === filter ? 'active' : ''}" data-action="atlas-filter" data-filter="${filter}">${filter === 'all' ? 'all' : filter === 'me' ? 'mine' : 'hers'}</button>`).join('')}
       </div>
-      <div id="entries-list">${renderEntriesList(state, list)}</div>
+      <div class="entries-grid" id="entries-list">${renderEntriesList(state, list)}</div>
     </div>
   </section>`;
 }

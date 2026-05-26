@@ -43,11 +43,33 @@ export function renderFinancePage(state: AppState): string {
       <div class="kpi"><div class="kpi-label">Subway cash</div><div class="kpi-value pos">${currency(subwayCashMo)}</div><div class="kpi-change">collected this month</div></div>
       <div class="kpi"><div class="kpi-label">spent</div><div class="kpi-value neg">${currency(spendingMo)}</div><div class="kpi-change">this month</div></div>
     </div>
-    <div class="finance-grid">
-      ${renderPanel('Options: covered calls & puts', state.txns.filter(txn => kindOf(txn) === 'option'), 'option')}
-      ${renderPanel('Spending', state.txns.filter(txn => kindOf(txn) === 'spending' || (kindOf(txn) === 'general' && txn.type === 'out')), 'spending')}
-      ${renderPanel('Subway cash collected', state.txns.filter(txn => kindOf(txn) === 'subway_cash'), 'subway_cash')}
-      ${renderPanel('Subway expenses', state.txns.filter(txn => kindOf(txn) === 'subway_expense'), 'subway_expense')}
+    <div class="finance-section-block">
+      <div class="finance-section-head">
+        <div>
+          <div class="section-title">Investing & personal money</div>
+          <div class="finance-section-sub">Covered calls, puts, and regular spending stay here.</div>
+        </div>
+      </div>
+      <div class="finance-grid">
+        ${renderPanel('Options: covered calls & puts', state.txns.filter(txn => kindOf(txn) === 'option'), 'option')}
+        ${renderPanel('Spending', state.txns.filter(txn => kindOf(txn) === 'spending' || (kindOf(txn) === 'general' && txn.type === 'out')), 'spending')}
+      </div>
+    </div>
+    <div class="finance-section-block subway-section">
+      <div class="finance-section-head">
+        <div>
+          <div class="section-title">Subway manager cash</div>
+          <div class="finance-section-sub">Cash collected and expenses for Walmart, Maple Grove, and Brooklyn Park stores.</div>
+        </div>
+        <div class="finance-section-actions">
+          <button class="finance-action compact" data-action="open-txn-modal" data-kind="subway_cash">+ cash</button>
+          <button class="finance-action compact" data-action="open-txn-modal" data-kind="subway_expense">+ expense</button>
+        </div>
+      </div>
+      <div class="finance-grid subway-grid">
+        ${renderPanel('Cash collected', state.txns.filter(txn => kindOf(txn) === 'subway_cash'), 'subway_cash')}
+        ${renderPanel('Store expenses', state.txns.filter(txn => kindOf(txn) === 'subway_expense'), 'subway_expense')}
+      </div>
     </div>
   </section>`;
 }

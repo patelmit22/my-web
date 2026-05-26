@@ -20,7 +20,7 @@ import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
 import { state } from './state/appState';
-import type { AtlasEntry, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
+import type { AtlasEntry, AtlasSection, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
 import { fileToPick, releasePicks, serializeMedia } from './utils/media';
 import {
@@ -227,6 +227,10 @@ export class DashboardApp {
         state.entryFilter = target.dataset.filter as typeof state.entryFilter;
         this.renderApp();
         break;
+      case 'atlas-section':
+        state.atlasSection = target.dataset.section as AtlasSection;
+        this.renderApp();
+        break;
       case 'choose-media':
         qs<HTMLInputElement>('#m-efiles').click();
         break;
@@ -242,7 +246,7 @@ export class DashboardApp {
         await this.saveAtlasEntry();
         break;
       case 'delete-entry':
-        if (confirm('delete this entry?')) await deleteEntry(target.dataset.id || '');
+        if (confirm('delete this story?')) await deleteEntry(target.dataset.id || '');
         break;
       case 'open-lightbox': {
         const entry = state.entries.find(item => String(item.id) === target.dataset.id);
@@ -540,6 +544,7 @@ export class DashboardApp {
       const entry: AtlasEntry = {
         id: Date.now(),
         who: state.currentUser!.role,
+        section: qs<HTMLSelectElement>('#m-esection').value as AtlasSection,
         title,
         body,
         thought: formValue(document, '#m-eth'),

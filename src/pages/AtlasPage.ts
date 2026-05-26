@@ -1,14 +1,24 @@
 import type { AppState } from '../state/appState';
-import type { AtlasEntry } from '../types/models';
+import type { AtlasEntry, AtlasSection } from '../types/models';
 import { fmtDate } from '../utils/format';
 import { esc } from '../utils/sanitize';
 
 export const moods = ['wild', 'happy', 'soft', 'chaotic', 'cozy', 'sad', 'unreal', 'in love', 'proud', 'grateful'];
 
+const sections: Array<{ key: AtlasSection; name: string; sub: string }> = [
+  { key: 'stories', name: 'our stories', sub: 'daily life, trips, memories, and all the normal Atlas entries' },
+  { key: 'protected', name: 'Our relation with protection', sub: 'personal relationship stories you want kept in its own protected section' }
+];
+
+function entrySection(entry: AtlasEntry): AtlasSection {
+  return entry.section || 'stories';
+}
+
 export function filteredEntries(state: AppState): AtlasEntry[] {
   const input = document.getElementById('atlas-search') as HTMLInputElement | null;
   const q = (input?.value || '').toLowerCase().trim();
-  let list = state.entries.filter(entry => state.entryFilter === 'all' || entry.who === state.entryFilter);
+  let list = state.entries.filter(entry => entrySection(entry) === state.atlasSection);
+  list = list.filter(entry => state.entryFilter === 'all' || entry.who === state.entryFilter);
   if (q) {
     list = list.filter(entry =>
       (entry.title || '').toLowerCase().includes(q) ||
@@ -22,9 +32,16 @@ export function filteredEntries(state: AppState): AtlasEntry[] {
 
 export function renderAtlasPage(state: AppState): string {
   const list = filteredEntries(state);
+  const active = sections.find(section => section.key === state.atlasSection) || sections[0];
   return `<section class="page active" id="page-atlas">
-    <div class="page-header"><div><div class="page-title">Atlas</div><div class="page-sub">all our crazy little stories, in one place</div></div><button class="btn-accent" data-action="open-entry-modal">+ write</button></div>
+    <div class="page-header"><div><div class="page-title">Atlas</div><div class="page-sub">two spaces for the stories you both want to keep</div></div><button class="btn-accent" data-action="open-entry-modal">+ write</button></div>
     <div class="atlas-wrap">
+      <div class="atlas-section-tabs">
+        ${sections.map(section => `<button class="atlas-section ${state.atlasSection === section.key ? 'active' : ''}" data-action="atlas-section" data-section="${section.key}">
+          <span>${section.name}</span><small>${section.sub}</small>
+        </button>`).join('')}
+      </div>
+      <div class="atlas-section-title">${active.name}</div>
       <input class="auth-input" id="atlas-search" placeholder="search entries..." value="" data-action="atlas-search" style="margin-bottom:0.8rem">
       <div class="atlas-filter">
         ${(['all', 'me', 'her'] as const).map(filter => `<button class="gtab ${state.entryFilter === filter ? 'active' : ''}" data-action="atlas-filter" data-filter="${filter}">${filter === 'all' ? 'all' : filter === 'me' ? 'mine' : 'hers'}</button>`).join('')}
@@ -44,7 +61,7 @@ export function renderEntriesList(state: AppState, list = filteredEntries(state)
     ${renderMedia(entry)}
     ${entry.thought ? `<div class="e-thought">"${esc(entry.thought)}"</div>` : ''}
     <div class="e-tags">${entry.mood ? `<span class="e-tag">${esc(entry.mood)}</span>` : ''}${(entry.tags || []).map(tag => `<span class="e-tag">${esc(tag)}</span>`).join('')}</div>
-    ${entry.who === state.currentUser?.role ? `<button class="e-del" data-action="delete-entry" data-id="${entry.id}">delete</button>` : ''}
+    <button class="e-del" data-action="delete-entry" data-id="${entry.id}">delete</button>
   </div>`).join('');
 }
 
@@ -66,6 +83,9 @@ export function renderEntryModal(state: AppState): string {
   return `<div class="modal-backdrop" id="modal-entry">
     <div class="modal"><button class="modal-close" data-action="close-modal" data-modal="modal-entry">×</button>
       <div class="modal-title">new entry</div>
+      <div class="field"><label class="field-label">section</label><select class="field-sel" id="m-esection">
+        ${sections.map(section => `<option value="${section.key}" ${state.atlasSection === section.key ? 'selected' : ''}>${section.name}</option>`).join('')}
+      </select></div>
       <div class="field"><label class="field-label">title</label><input class="field-input" id="m-et"></div>
       <div class="field"><label class="field-label">the story</label><textarea class="field-ta" id="m-eb" placeholder="write it out..."></textarea></div>
       <div class="field"><label class="field-label">a thought</label><input class="field-input" id="m-eth" placeholder="one line that sums it up"></div>

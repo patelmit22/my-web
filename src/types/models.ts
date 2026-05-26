@@ -22,6 +22,7 @@ export interface AtlasMedia {
 export interface AtlasEntry {
   id: number;
   who: UserRole;
+  section?: AtlasSection;
   title: string;
   body: string;
   thought?: string;
@@ -30,6 +31,8 @@ export interface AtlasEntry {
   tags?: string[];
   date: string;
 }
+
+export type AtlasSection = 'stories' | 'protected';
 
 export interface Transaction {
   id: string;

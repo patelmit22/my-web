@@ -1,9 +1,10 @@
-import type { AtlasEntry, CurrentUser, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
 import type { MediaPick } from '../utils/media';
 
 export interface AppState {
   currentUser: CurrentUser | null;
   activePage: PageId;
+  atlasSection: AtlasSection;
   entryFilter: 'all' | 'me' | 'her';
   gameFilter: 'all' | Game['status'];
   selectedMood: string;
@@ -26,6 +27,7 @@ export interface AppState {
 export const state: AppState = {
   currentUser: null,
   activePage: 'home',
+  atlasSection: 'stories',
   entryFilter: 'all',
   gameFilter: 'all',
   selectedMood: '',

@@ -112,6 +112,7 @@
   .hero-greet{font-size:1.7rem}
   .board{grid-template-columns:1fr;gap:0.8rem}
   .col{min-height:auto}
+  .finance-kpi-row{grid-template-columns:1fr}
   .finance-grid{grid-template-columns:1fr}
   .atlas-section-tabs{grid-template-columns:1fr}
   .entries-grid{grid-template-columns:1fr}

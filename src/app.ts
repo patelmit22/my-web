@@ -361,7 +361,7 @@ export class DashboardApp {
   }
 
   private async saveTxn(): Promise<void> {
-    const amount = parseFloat(formValue(document, '#m-tamt'));
+    const amount = parseMoney(formValue(document, '#m-tamt'));
     if (!amount || amount <= 0) return this.toast.show('add an amount', 'err');
     const kind = state.txnKind;
     const symbol = optionalFormValue('#m-tsymbol').toUpperCase();
@@ -376,22 +376,37 @@ export class DashboardApp {
           : 'Spending';
     const name = optionalFormValue('#m-tname') || fallbackName;
     if (kind === 'option' && !symbol) return this.toast.show('add the stock symbol', 'err');
-    await saveTransaction({
-      id: `t_${Date.now()}`,
-      type: this.txnTypeForKind(kind),
-      kind,
-      name,
-      amount,
-      cat: optionalFormValue('#m-tcat'),
-      note: optionalFormValue('#m-tnote'),
-      symbol: symbol || undefined,
-      optionType: optionType || undefined,
-      store: store || undefined,
-      date: new Date().toISOString(),
-      by: state.currentUser!.role
-    });
-    closeModal('modal-txn');
-    this.toast.show('saved', 'ok');
+    const button = document.querySelector<HTMLButtonElement>('#m-tsave');
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'saving...';
+    }
+    try {
+      await saveTransaction({
+        id: `t_${Date.now()}`,
+        type: this.txnTypeForKind(kind),
+        kind,
+        name,
+        amount,
+        cat: optionalFormValue('#m-tcat'),
+        note: optionalFormValue('#m-tnote'),
+        symbol: symbol || undefined,
+        optionType: optionType || undefined,
+        store: store || undefined,
+        date: new Date().toISOString(),
+        by: state.currentUser!.role
+      });
+      closeModal('modal-txn');
+      this.toast.show('saved ✓', 'ok');
+    } catch (error) {
+      console.error('finance save failed', error);
+      this.toast.show(`finance did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = 'save';
+      }
+    }
   }
 
   private async saveWorkTask(): Promise<void> {
@@ -705,4 +720,8 @@ function storeLabel(store?: Transaction['store']): string {
 
 function optionalFormValue(selector: string): string {
   return (document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector)?.value || '').trim();
+}
+
+function parseMoney(value: string): number {
+  return Number.parseFloat(value.replace(/[$,\s]/g, ''));
 }

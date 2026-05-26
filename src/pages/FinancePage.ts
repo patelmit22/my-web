@@ -24,31 +24,38 @@ export function renderFinancePage(state: AppState): string {
     const date = new Date(t.date);
     return date.getMonth() === month && date.getFullYear() === year;
   });
+  const personalTxns = state.txns.filter(txn => {
+    const kind = kindOf(txn);
+    return kind === 'option' || kind === 'spending' || kind === 'general';
+  });
+  const subwayTxns = state.txns.filter(txn => kindOf(txn) === 'subway_cash' || kindOf(txn) === 'subway_expense');
   const optionMo = sum(monthTxns, txn => kindOf(txn) === 'option');
-  const spendingMo = sum(monthTxns, txn => txn.type === 'out');
+  const spendingMo = sum(monthTxns, txn => {
+    const kind = kindOf(txn);
+    return txn.type === 'out' && (kind === 'spending' || kind === 'general');
+  });
   const subwayCashMo = sum(monthTxns, txn => kindOf(txn) === 'subway_cash');
-  const balance = state.txns.reduce((total, txn) => total + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
+  const subwayExpenseMo = sum(monthTxns, txn => kindOf(txn) === 'subway_expense');
+  const personalBalance = personalTxns.reduce((total, txn) => total + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
+  const subwayBalance = subwayTxns.reduce((total, txn) => total + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
 
   return `<section class="page active" id="page-finance">
-    <div class="page-header"><div><div class="page-title">Finance</div><div class="page-sub">covered calls, puts, spending, and Subway cash tracking</div></div></div>
-    <div class="finance-actions">
-      <button class="finance-action" data-action="open-txn-modal" data-kind="option">+ option premium</button>
-      <button class="finance-action" data-action="open-txn-modal" data-kind="spending">+ spending</button>
-      <button class="finance-action" data-action="open-txn-modal" data-kind="subway_cash">+ Subway cash</button>
-      <button class="finance-action" data-action="open-txn-modal" data-kind="subway_expense">+ Subway expense</button>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi"><div class="kpi-label">balance</div><div class="kpi-value ${balance >= 0 ? 'pos' : 'neg'}">${currency(balance)}</div><div class="kpi-change">all time</div></div>
-      <div class="kpi"><div class="kpi-label">options premium</div><div class="kpi-value pos">${currency(optionMo)}</div><div class="kpi-change">covered calls + puts this month</div></div>
-      <div class="kpi"><div class="kpi-label">Subway cash</div><div class="kpi-value pos">${currency(subwayCashMo)}</div><div class="kpi-change">collected this month</div></div>
-      <div class="kpi"><div class="kpi-label">spent</div><div class="kpi-value neg">${currency(spendingMo)}</div><div class="kpi-change">this month</div></div>
-    </div>
+    <div class="page-header"><div><div class="page-title">Finance</div><div class="page-sub">personal money and Subway manager cash stay separate.</div></div></div>
     <div class="finance-section-block">
       <div class="finance-section-head">
         <div>
-          <div class="section-title">Investing & personal money</div>
-          <div class="finance-section-sub">Covered calls, puts, and regular spending stay here.</div>
+          <div class="section-title">Personal finance</div>
+          <div class="finance-section-sub">Covered calls, puts, and your regular personal spending.</div>
         </div>
+        <div class="finance-section-actions">
+          <button class="finance-action compact" data-action="open-txn-modal" data-kind="option">+ option premium</button>
+          <button class="finance-action compact" data-action="open-txn-modal" data-kind="spending">+ spending</button>
+        </div>
+      </div>
+      <div class="kpi-row finance-kpi-row">
+        <div class="kpi"><div class="kpi-label">personal balance</div><div class="kpi-value ${personalBalance >= 0 ? 'pos' : 'neg'}">${currency(personalBalance)}</div><div class="kpi-change">all time</div></div>
+        <div class="kpi"><div class="kpi-label">options premium</div><div class="kpi-value pos">${currency(optionMo)}</div><div class="kpi-change">covered calls + puts this month</div></div>
+        <div class="kpi"><div class="kpi-label">personal spent</div><div class="kpi-value neg">${currency(spendingMo)}</div><div class="kpi-change">this month</div></div>
       </div>
       <div class="finance-grid">
         ${renderPanel('Options: covered calls & puts', state.txns.filter(txn => kindOf(txn) === 'option'), 'option')}
@@ -62,9 +69,14 @@ export function renderFinancePage(state: AppState): string {
           <div class="finance-section-sub">Cash collected and expenses for Walmart, Maple Grove, and Brooklyn Park stores.</div>
         </div>
         <div class="finance-section-actions">
-          <button class="finance-action compact" data-action="open-txn-modal" data-kind="subway_cash">+ cash</button>
-          <button class="finance-action compact" data-action="open-txn-modal" data-kind="subway_expense">+ expense</button>
+          <button class="finance-action compact" data-action="open-txn-modal" data-kind="subway_cash">+ Subway cash</button>
+          <button class="finance-action compact" data-action="open-txn-modal" data-kind="subway_expense">+ Subway expense</button>
         </div>
+      </div>
+      <div class="kpi-row finance-kpi-row subway-kpi-row">
+        <div class="kpi"><div class="kpi-label">Subway net</div><div class="kpi-value ${subwayBalance >= 0 ? 'pos' : 'neg'}">${currency(subwayBalance)}</div><div class="kpi-change">cash minus expenses, all time</div></div>
+        <div class="kpi"><div class="kpi-label">Subway cash</div><div class="kpi-value pos">${currency(subwayCashMo)}</div><div class="kpi-change">collected this month</div></div>
+        <div class="kpi"><div class="kpi-label">Subway expenses</div><div class="kpi-value neg">${currency(subwayExpenseMo)}</div><div class="kpi-change">this month</div></div>
       </div>
       <div class="finance-grid subway-grid">
         ${renderPanel('Cash collected', state.txns.filter(txn => kindOf(txn) === 'subway_cash'), 'subway_cash')}
@@ -115,7 +127,7 @@ export function renderTxnModal(kind: FinanceKind): string {
       ${renderKindFields(kind)}
       <div class="field"><label class="field-label">amount ($)</label><input class="field-input" id="m-tamt" type="number" step="0.01" placeholder="0.00"></div>
       <div class="field"><label class="field-label">notes (optional)</label><input class="field-input" id="m-tnote"></div>
-      <button class="btn-primary" data-action="save-txn">save</button>
+      <button class="btn-primary" id="m-tsave" data-action="save-txn">save</button>
     </div>
   </div>`;
 }

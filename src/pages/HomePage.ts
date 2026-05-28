@@ -18,7 +18,7 @@ export function renderHomePage(state: AppState): string {
   return `<section class="page active" id="page-home">
     <div class="hero">
       <div class="hero-greet">good <span id="tod">${greeting.label}</span>, <span class="name" id="hello-name">${state.currentUser?.display.toLowerCase() || 'mit'}</span></div>
-      <div class="hero-sub">your little command center — track money, work, memories, and games all in one place.</div>
+      <div class="hero-sub">your little command center — track money, work, memories, games, and documents all in one place.</div>
       <div class="hero-time" id="now-time">${greeting.timestamp}</div>
     </div>
     <div class="tiles">
@@ -37,6 +37,10 @@ export function renderHomePage(state: AppState): string {
       <button class="tile" data-action="nav" data-page="games" style="--tile-bg:linear-gradient(135deg,#7c5cff,#4f46e5);--tile-glow:rgba(124,92,255,0.3)">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="11" rx="3"/><path d="M7 12h3M8.5 10.5v3M14 11h.01M17 13h.01"/></svg></div>
         <div class="tile-name">Games</div><div class="tile-desc">what i'm playing</div><div class="tile-stat">${state.games.length} total · ${playing} playing</div>
+      </button>
+      <button class="tile" data-action="nav" data-page="documents" style="--tile-bg:linear-gradient(135deg,#f59e0b,#ef4444);--tile-glow:rgba(245,158,11,0.25)">
+        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg></div>
+        <div class="tile-name">Documents</div><div class="tile-desc">Google Drive locker</div><div class="tile-stat">${state.driveDocs.length} loaded</div>
       </button>
     </div>
   </section>`;

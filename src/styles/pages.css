@@ -313,6 +313,49 @@
 .clip-links a:hover{background:rgba(147,197,253,0.14)}
 
 
+/* ---------- DOCUMENTS ---------- */
+.drive-setup,.drive-panel{
+  border:1px solid var(--glass-border);
+  border-radius:18px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.018));
+  padding:1.1rem;
+  margin-bottom:1rem;
+}
+.drive-setup p{color:var(--ink-dim);font-size:0.9rem;line-height:1.65;margin-top:0.5rem}
+.drive-setup code{color:#fcd34d;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.18);border-radius:6px;padding:0.12rem 0.32rem}
+.drive-panel{
+  background:
+    radial-gradient(circle at top left,rgba(245,158,11,0.12),transparent 34%),
+    linear-gradient(135deg,rgba(245,158,11,0.07),rgba(124,92,255,0.04));
+}
+.drive-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.drive-panel-head .section-title{margin:0}
+.doc-upload-row{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:1rem;align-items:stretch}
+.doc-drop{
+  min-height:140px;border:1px dashed rgba(245,158,11,0.38);border-radius:16px;
+  background:rgba(245,158,11,0.08);color:var(--ink);font-family:var(--font-ui);font-weight:800;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.4rem;
+}
+.doc-drop span{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f59e0b,#ef4444);font-size:1.4rem}
+.doc-upload-copy{display:flex;flex-direction:column;gap:0.75rem;min-width:0}
+.doc-selected{min-height:72px;border:1px solid var(--glass-border);border-radius:14px;background:rgba(0,0,0,0.22);padding:0.75rem;display:flex;gap:0.45rem;flex-wrap:wrap;align-content:flex-start}
+.doc-selected span{font-family:var(--font-mono);font-size:0.7rem;color:var(--ink);border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.045);border-radius:999px;padding:0.25rem 0.55rem}
+.doc-selected.muted{color:var(--ink-mute);font-size:0.85rem;align-items:center}
+.doc-upload-btn{margin-top:auto}
+.drive-status{font-family:var(--font-mono);font-size:0.74rem;color:var(--ink-dim);margin-top:0.8rem}
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.9rem}
+.doc-card{
+  display:flex;gap:0.85rem;align-items:center;text-decoration:none;color:var(--ink);
+  border:1px solid var(--glass-border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015));
+  padding:0.9rem;transition:all 0.2s;min-width:0;
+}
+.doc-card:hover{transform:translateY(-2px);border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.08)}
+.doc-icon{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:0.72rem;font-weight:800;color:#fff;flex-shrink:0}
+.doc-copy{min-width:0}
+.doc-name{font-family:var(--font-ui);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-meta{font-family:var(--font-mono);font-size:0.7rem;color:var(--ink-mute);margin-top:0.25rem}
+
+
 /* ---------- ATLAS ---------- */
 .atlas-wrap{max-width:1100px;margin:0 auto}
 .atlas-section-tabs{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:1rem}

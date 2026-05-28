@@ -83,4 +83,14 @@ export interface Game {
   by: UserRole;
 }
 
-export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'settings';
+export interface DriveDoc {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink?: string;
+  webContentLink?: string;
+  size?: string;
+  createdTime?: string;
+}
+
+export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'documents' | 'settings';

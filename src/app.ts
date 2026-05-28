@@ -19,6 +19,7 @@ import { Lightbox } from './components/Lightbox';
 import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
+import { connectDrive, listDriveDocs, uploadDriveDoc } from './api/driveApi';
 import { state } from './state/appState';
 import type { AtlasEntry, AtlasSection, FinanceKind, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
@@ -29,6 +30,7 @@ import {
   renderEntriesList,
   renderFinancePage,
   renderGameCoverPreview,
+  renderDocumentsPage,
   renderGameMediaPreviews,
   renderGamesPage,
   renderHomePage,
@@ -85,6 +87,7 @@ export class DashboardApp {
       case 'work': return renderWorkPage(state);
       case 'atlas': return renderAtlasPage(state);
       case 'games': return renderGamesPage(state);
+      case 'documents': return renderDocumentsPage(state);
       case 'settings': return renderSettingsPage(state);
       case 'home':
       default: return renderHomePage(state);
@@ -120,6 +123,7 @@ export class DashboardApp {
       if (target.id === 'm-gd-cover-file') this.handleGameCoverFiles(target.files, 'm-gd-cover-prev', 'm-gd-cover-file');
       if (target.id === 'm-kfiles') this.handleWorkMediaFiles(target.files);
       if (target.id === 'm-kd-files') this.handleWorkMediaFiles(target.files, 'm-kd-prev', 'm-kd-files');
+      if (target.id === 'doc-files') this.handleDocumentFiles(target.files);
     });
   }
 
@@ -184,6 +188,18 @@ export class DashboardApp {
       case 'open-game-modal':
         this.resetGameModal();
         openModal('modal-game');
+        break;
+      case 'connect-drive':
+        await this.connectDriveAndLoad();
+        break;
+      case 'refresh-drive-docs':
+        await this.refreshDriveDocs();
+        break;
+      case 'choose-doc-files':
+        qs<HTMLInputElement>('#doc-files').click();
+        break;
+      case 'upload-docs':
+        await this.uploadDocuments();
         break;
       case 'close-modal':
         closeModal(target.dataset.modal || '');
@@ -358,6 +374,74 @@ export class DashboardApp {
   private showDataError(area: string, error: Error): void {
     console.error(`${area} sync failed`, error);
     this.toast.show(`${area} sync failed: ${error.message || 'check Firebase rules'}`, 'err');
+  }
+
+  private handleDocumentFiles(files: FileList | null): void {
+    state.docFiles = files ? Array.from(files) : [];
+    state.driveStatus = state.docFiles.length ? `${state.docFiles.length} file${state.docFiles.length === 1 ? '' : 's'} ready to upload` : '';
+    this.renderApp();
+  }
+
+  private async connectDriveAndLoad(): Promise<void> {
+    state.driveBusy = true;
+    state.driveStatus = 'connecting to Google Drive...';
+    try {
+      await connectDrive();
+      state.driveConnected = true;
+      state.driveStatus = 'Google Drive connected';
+      state.driveDocs = await listDriveDocs();
+      this.toast.show('Drive connected ✓', 'ok');
+    } catch (error) {
+      console.error('Drive connect failed', error);
+      state.driveStatus = error instanceof Error ? error.message : 'Drive connection failed';
+      this.toast.show(`Drive failed: ${state.driveStatus}`, 'err');
+    } finally {
+      state.driveBusy = false;
+      this.renderApp();
+    }
+  }
+
+  private async refreshDriveDocs(): Promise<void> {
+    state.driveBusy = true;
+    state.driveStatus = 'loading Drive documents...';
+    this.renderApp();
+    try {
+      state.driveDocs = await listDriveDocs();
+      state.driveConnected = true;
+      state.driveStatus = `loaded ${state.driveDocs.length} Drive document${state.driveDocs.length === 1 ? '' : 's'}`;
+    } catch (error) {
+      console.error('Drive refresh failed', error);
+      state.driveStatus = error instanceof Error ? error.message : 'Drive refresh failed';
+      this.toast.show(`Drive failed: ${state.driveStatus}`, 'err');
+    } finally {
+      state.driveBusy = false;
+      this.renderApp();
+    }
+  }
+
+  private async uploadDocuments(): Promise<void> {
+    if (!state.docFiles.length) return this.toast.show('choose documents first', 'err');
+    state.driveBusy = true;
+    this.renderApp();
+    try {
+      const total = state.docFiles.length;
+      for (let i = 0; i < total; i += 1) {
+        state.driveStatus = `uploading ${i + 1}/${total}: ${state.docFiles[i].name}`;
+        await uploadDriveDoc(state.docFiles[i]);
+      }
+      state.docFiles = [];
+      state.driveDocs = await listDriveDocs();
+      state.driveConnected = true;
+      state.driveStatus = 'uploaded to Google Drive ✓';
+      this.toast.show('documents uploaded ✓', 'ok');
+    } catch (error) {
+      console.error('Drive upload failed', error);
+      state.driveStatus = error instanceof Error ? error.message : 'Drive upload failed';
+      this.toast.show(`upload failed: ${state.driveStatus}`, 'err');
+    } finally {
+      state.driveBusy = false;
+      this.renderApp();
+    }
   }
 
   private async saveTxn(): Promise<void> {

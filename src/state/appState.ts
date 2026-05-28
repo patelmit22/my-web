@@ -1,4 +1,4 @@
-import type { AtlasEntry, AtlasSection, CurrentUser, FinanceKind, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, FinanceKind, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
 import type { MediaPick } from '../utils/media';
 
 export interface AppState {
@@ -16,6 +16,11 @@ export interface AppState {
   workMediaPicks: MediaPick[];
   selectedGameId: string | null;
   selectedTaskId: string | null;
+  driveDocs: DriveDoc[];
+  driveConnected: boolean;
+  driveBusy: boolean;
+  driveStatus: string;
+  docFiles: File[];
   lightboxUrls: string[];
   lightboxIndex: number;
   herConfig: HerConfig | null;
@@ -40,6 +45,11 @@ export const state: AppState = {
   workMediaPicks: [],
   selectedGameId: null,
   selectedTaskId: null,
+  driveDocs: [],
+  driveConnected: false,
+  driveBusy: false,
+  driveStatus: '',
+  docFiles: [],
   lightboxUrls: [],
   lightboxIndex: 0,
   herConfig: null,

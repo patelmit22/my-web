@@ -4,6 +4,8 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '545205180619-tp29t0n
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const FOLDER_NAME = 'mitpatel.family documents';
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
+const CONNECTED_KEY = 'mitpatel_drive_connected_v1';
+const DOC_CACHE_PREFIX = 'mitpatel_drive_docs_v1_';
 
 type TokenResponse = { access_token?: string; error?: string; error_description?: string };
 type TokenClient = {
@@ -40,7 +42,19 @@ export function isDriveConnected(): boolean {
   return Boolean(accessToken);
 }
 
-export async function connectDrive(): Promise<void> {
+export function wasDriveConnected(): boolean {
+  return localStorage.getItem(CONNECTED_KEY) === 'yes';
+}
+
+export function loadCachedDriveDocs(owner: DriveOwner): DriveDoc[] {
+  try {
+    return JSON.parse(localStorage.getItem(`${DOC_CACHE_PREFIX}${owner}`) || '[]') as DriveDoc[];
+  } catch {
+    return [];
+  }
+}
+
+export async function connectDrive(options: { interactive?: boolean } = {}): Promise<void> {
   if (!CLIENT_ID) throw new Error('Missing VITE_GOOGLE_CLIENT_ID in Netlify environment variables.');
   if (!window.google?.accounts?.oauth2) await loadGoogleIdentity();
   tokenClient ||= window.google!.accounts!.oauth2!.initTokenClient({
@@ -54,10 +68,12 @@ export async function connectDrive(): Promise<void> {
       if (result.error) reject(new Error(result.error_description || result.error));
       else resolve(result);
     };
-    tokenClient!.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
+    const prompt = options.interactive === false ? '' : accessToken ? '' : 'consent';
+    tokenClient!.requestAccessToken({ prompt });
   });
   if (!response.access_token) throw new Error('Google did not return an access token.');
   accessToken = response.access_token;
+  localStorage.setItem(CONNECTED_KEY, 'yes');
   folderId = await ensureFolder();
 }
 
@@ -66,7 +82,9 @@ export async function listDriveDocs(owner: DriveOwner): Promise<DriveDoc[]> {
   const query = encodeURIComponent(`'${parentId}' in parents and trashed=false`);
   const fields = encodeURIComponent('files(id,name,mimeType,webViewLink,webContentLink,size,createdTime)');
   const data = await driveFetch<{ files: DriveDoc[] }>(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=createdTime desc&pageSize=100`);
-  return data.files || [];
+  const docs = data.files || [];
+  cacheDriveDocs(owner, docs);
+  return docs;
 }
 
 export async function uploadDriveDoc(file: File, owner: DriveOwner): Promise<DriveDoc> {
@@ -99,7 +117,7 @@ export async function uploadDriveDoc(file: File, owner: DriveOwner): Promise<Dri
 }
 
 export async function deleteDriveDoc(id: string): Promise<void> {
-  await requireDrive('me_personal');
+  if (!accessToken) await connectDrive();
   await driveFetch<void>(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}`, {
     method: 'DELETE'
   });
@@ -135,6 +153,10 @@ function ownerLabel(owner: DriveOwner): string {
   if (owner === 'me_work') return 'Mit work documents';
   if (owner === 'her') return 'Shrushti documents';
   return 'Mit personal documents';
+}
+
+function cacheDriveDocs(owner: DriveOwner, docs: DriveDoc[]): void {
+  localStorage.setItem(`${DOC_CACHE_PREFIX}${owner}`, JSON.stringify(docs));
 }
 
 async function driveFetch<T>(url: string, init: RequestInit = {}): Promise<T> {

@@ -19,7 +19,7 @@ import { Lightbox } from './components/Lightbox';
 import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
-import { connectDrive, deleteDriveDoc, listDriveDocs, uploadDriveDoc } from './api/driveApi';
+import { connectDrive, deleteDriveDoc, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
 import { state } from './state/appState';
 import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
@@ -339,7 +339,17 @@ export class DashboardApp {
 
   private navigate(page: PageId): void {
     state.activePage = page;
+    if (page === 'documents') {
+      state.driveDocs = loadCachedDriveDocs(state.driveOwner);
+      state.driveConnected = isDriveConnected() || wasDriveConnected();
+      state.driveStatus = state.driveDocs.length
+        ? `showing saved ${driveOwnerLabel(state.driveOwner)} document list`
+        : wasDriveConnected()
+          ? 'reconnecting to Google Drive...'
+          : 'connect Google Drive to load documents';
+    }
     this.renderApp();
+    if (page === 'documents') void this.autoLoadDriveDocs();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -391,17 +401,19 @@ export class DashboardApp {
   private async selectDocumentOwner(owner: DriveOwner): Promise<void> {
     state.driveOwner = owner;
     state.docFiles = [];
-    state.driveDocs = [];
-    state.driveStatus = `${driveOwnerLabel(owner)} selected`;
+    state.driveDocs = loadCachedDriveDocs(owner);
+    state.driveStatus = state.driveDocs.length
+      ? `showing saved ${driveOwnerLabel(owner)} document list`
+      : `${driveOwnerLabel(owner)} selected`;
     this.renderApp();
-    if (state.driveConnected) await this.refreshDriveDocs();
+    if (state.driveConnected || wasDriveConnected()) await this.autoLoadDriveDocs();
   }
 
   private async connectDriveAndLoad(): Promise<void> {
     state.driveBusy = true;
     state.driveStatus = 'connecting to Google Drive...';
     try {
-      await connectDrive();
+      await connectDrive({ interactive: true });
       state.driveConnected = true;
       state.driveStatus = 'Google Drive connected';
       state.driveDocs = await listDriveDocs(state.driveOwner);
@@ -428,6 +440,28 @@ export class DashboardApp {
       console.error('Drive refresh failed', error);
       state.driveStatus = error instanceof Error ? error.message : 'Drive refresh failed';
       this.toast.show(`Drive failed: ${state.driveStatus}`, 'err');
+    } finally {
+      state.driveBusy = false;
+      this.renderApp();
+    }
+  }
+
+  private async autoLoadDriveDocs(): Promise<void> {
+    if (!wasDriveConnected() && !isDriveConnected()) return;
+    state.driveBusy = true;
+    if (!state.driveDocs.length) state.driveStatus = 'loading Drive documents...';
+    this.renderApp();
+    try {
+      if (!isDriveConnected()) await connectDrive({ interactive: false });
+      state.driveDocs = await listDriveDocs(state.driveOwner);
+      state.driveConnected = true;
+      state.driveStatus = `loaded ${state.driveDocs.length} ${driveOwnerLabel(state.driveOwner)} document${state.driveDocs.length === 1 ? '' : 's'}`;
+    } catch (error) {
+      console.warn('Silent Drive reconnect failed', error);
+      state.driveConnected = false;
+      state.driveStatus = state.driveDocs.length
+        ? `showing saved list — tap connect Google Drive to refresh`
+        : 'tap connect Google Drive to load documents';
     } finally {
       state.driveBusy = false;
       this.renderApp();

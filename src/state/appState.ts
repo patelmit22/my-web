@@ -46,7 +46,7 @@ export const state: AppState = {
   workMediaPicks: [],
   selectedGameId: null,
   selectedTaskId: null,
-  driveOwner: 'me',
+  driveOwner: 'me_personal',
   driveDocs: [],
   driveConnected: false,
   driveBusy: false,

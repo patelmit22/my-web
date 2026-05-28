@@ -99,7 +99,7 @@ export async function uploadDriveDoc(file: File, owner: DriveOwner): Promise<Dri
 }
 
 export async function deleteDriveDoc(id: string): Promise<void> {
-  await requireDrive('me');
+  await requireDrive('me_personal');
   await driveFetch<void>(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}`, {
     method: 'DELETE'
   });
@@ -132,7 +132,9 @@ async function ensureFolder(name = FOLDER_NAME, parentId?: string): Promise<stri
 }
 
 function ownerLabel(owner: DriveOwner): string {
-  return owner === 'her' ? 'Shrushti documents' : 'Mit documents';
+  if (owner === 'me_work') return 'Mit work documents';
+  if (owner === 'her') return 'Shrushti documents';
+  return 'Mit personal documents';
 }
 
 async function driveFetch<T>(url: string, init: RequestInit = {}): Promise<T> {

@@ -196,7 +196,7 @@ export class DashboardApp {
         await this.refreshDriveDocs();
         break;
       case 'select-doc-owner':
-        await this.selectDocumentOwner((target.dataset.owner as DriveOwner) || 'me');
+        await this.selectDocumentOwner((target.dataset.owner as DriveOwner) || 'me_personal');
         break;
       case 'choose-doc-files':
         qs<HTMLInputElement>('#doc-files').click();
@@ -839,7 +839,9 @@ function storeLabel(store?: Transaction['store']): string {
 }
 
 function driveOwnerLabel(owner: DriveOwner): string {
-  return owner === 'her' ? 'Shrushti' : 'Mit';
+  if (owner === 'me_work') return 'Mit work';
+  if (owner === 'her') return 'Shrushti';
+  return 'Mit personal';
 }
 
 function optionalFormValue(selector: string): string {

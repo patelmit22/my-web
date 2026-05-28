@@ -21,7 +21,7 @@ function docIcon(mimeType: string): string {
 
 export function renderDocumentsPage(state: AppState): string {
   const hasClient = hasDriveClient();
-  const ownerLabel = state.driveOwner === 'her' ? 'Shrushti' : 'Mit';
+  const ownerLabel = sectionLabel(state.driveOwner);
   const selected = state.docFiles.length
     ? `<div class="doc-selected">${state.docFiles.map(file => `<span>${esc(file.name)}</span>`).join('')}</div>`
     : '<div class="doc-selected muted">no files selected</div>';
@@ -54,7 +54,7 @@ export function renderDocumentsPage(state: AppState): string {
       <div class="drive-panel-head">
         <div>
           <div class="section-title">Drive locker</div>
-          <div class="finance-section-sub">Files save in separate Drive folders for Mit and Shrushti.</div>
+          <div class="finance-section-sub">Files save in Google Drive under <strong>mitpatel.family documents</strong>, separated by section.</div>
         </div>
         <div class="finance-section-actions">
           <button class="finance-action compact" data-action="connect-drive" ${!hasClient || state.driveBusy ? 'disabled' : ''}>${state.driveConnected ? 'Drive connected' : 'connect Google Drive'}</button>
@@ -62,7 +62,8 @@ export function renderDocumentsPage(state: AppState): string {
         </div>
       </div>
       <div class="doc-owner-tabs">
-        <button class="doc-owner-tab ${state.driveOwner === 'me' ? 'active' : ''}" data-action="select-doc-owner" data-owner="me">Mit documents</button>
+        <button class="doc-owner-tab ${state.driveOwner === 'me_personal' ? 'active' : ''}" data-action="select-doc-owner" data-owner="me_personal">Mit personal</button>
+        <button class="doc-owner-tab ${state.driveOwner === 'me_work' ? 'active' : ''}" data-action="select-doc-owner" data-owner="me_work">Mit work</button>
         <button class="doc-owner-tab ${state.driveOwner === 'her' ? 'active' : ''}" data-action="select-doc-owner" data-owner="her">Shrushti documents</button>
       </div>
       <div class="doc-upload-row">
@@ -80,4 +81,10 @@ export function renderDocumentsPage(state: AppState): string {
     </div>
     <div class="doc-grid">${docs}</div>
   </section>`;
+}
+
+function sectionLabel(owner: AppState['driveOwner']): string {
+  if (owner === 'me_work') return 'Mit work';
+  if (owner === 'her') return 'Shrushti';
+  return 'Mit personal';
 }

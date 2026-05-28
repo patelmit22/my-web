@@ -330,7 +330,7 @@
 }
 .drive-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
 .drive-panel-head .section-title{margin:0}
-.doc-owner-tabs{display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;margin-bottom:1rem}
+.doc-owner-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.65rem;margin-bottom:1rem}
 .doc-owner-tab{
   border:1px solid var(--glass-border);border-radius:14px;
   background:rgba(255,255,255,0.035);color:var(--ink-dim);

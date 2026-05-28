@@ -1,6 +1,6 @@
 import type { DriveDoc } from '../types/models';
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '545205180619-tp29t0necatad5mc8l2fcg1cqfpfs9d1.apps.googleusercontent.com';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const FOLDER_NAME = 'mitpatel.family documents';
 const GIS_SRC = 'https://accounts.google.com/gsi/client';

@@ -1,4 +1,4 @@
-import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, FinanceKind, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
 import type { MediaPick } from '../utils/media';
 
 export interface AppState {
@@ -16,6 +16,7 @@ export interface AppState {
   workMediaPicks: MediaPick[];
   selectedGameId: string | null;
   selectedTaskId: string | null;
+  driveOwner: DriveOwner;
   driveDocs: DriveDoc[];
   driveConnected: boolean;
   driveBusy: boolean;
@@ -45,6 +46,7 @@ export const state: AppState = {
   workMediaPicks: [],
   selectedGameId: null,
   selectedTaskId: null,
+  driveOwner: 'me',
   driveDocs: [],
   driveConnected: false,
   driveBusy: false,

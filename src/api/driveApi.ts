@@ -1,4 +1,4 @@
-import type { DriveDoc } from '../types/models';
+import type { DriveDoc, DriveOwner } from '../types/models';
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '545205180619-tp29t0necatad5mc8l2fcg1cqfpfs9d1.apps.googleusercontent.com';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -30,6 +30,7 @@ declare global {
 let accessToken = '';
 let tokenClient: TokenClient | null = null;
 let folderId = '';
+const sectionFolderIds: Partial<Record<DriveOwner, string>> = {};
 
 export function hasDriveClient(): boolean {
   return Boolean(CLIENT_ID);
@@ -60,20 +61,20 @@ export async function connectDrive(): Promise<void> {
   folderId = await ensureFolder();
 }
 
-export async function listDriveDocs(): Promise<DriveDoc[]> {
-  await requireDrive();
-  const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+export async function listDriveDocs(owner: DriveOwner): Promise<DriveDoc[]> {
+  const parentId = await requireDrive(owner);
+  const query = encodeURIComponent(`'${parentId}' in parents and trashed=false`);
   const fields = encodeURIComponent('files(id,name,mimeType,webViewLink,webContentLink,size,createdTime)');
   const data = await driveFetch<{ files: DriveDoc[] }>(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=createdTime desc&pageSize=100`);
   return data.files || [];
 }
 
-export async function uploadDriveDoc(file: File): Promise<DriveDoc> {
-  await requireDrive();
+export async function uploadDriveDoc(file: File, owner: DriveOwner): Promise<DriveDoc> {
+  const parentId = await requireDrive(owner);
   const metadata = {
     name: file.name,
     mimeType: file.type || 'application/octet-stream',
-    parents: [folderId]
+    parents: [parentId]
   };
   const boundary = `mitpatel_family_${Date.now()}`;
   const delimiter = `\r\n--${boundary}\r\n`;
@@ -97,13 +98,23 @@ export async function uploadDriveDoc(file: File): Promise<DriveDoc> {
   });
 }
 
-async function requireDrive(): Promise<void> {
-  if (!accessToken) await connectDrive();
-  if (!folderId) folderId = await ensureFolder();
+export async function deleteDriveDoc(id: string): Promise<void> {
+  await requireDrive('me');
+  await driveFetch<void>(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}`, {
+    method: 'DELETE'
+  });
 }
 
-async function ensureFolder(): Promise<string> {
-  const query = encodeURIComponent(`name='${FOLDER_NAME.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+async function requireDrive(owner: DriveOwner): Promise<string> {
+  if (!accessToken) await connectDrive();
+  if (!folderId) folderId = await ensureFolder();
+  sectionFolderIds[owner] ||= await ensureFolder(ownerLabel(owner), folderId);
+  return sectionFolderIds[owner]!;
+}
+
+async function ensureFolder(name = FOLDER_NAME, parentId?: string): Promise<string> {
+  const parentQuery = parentId ? ` and '${parentId}' in parents` : '';
+  const query = encodeURIComponent(`name='${name.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false${parentQuery}`);
   const fields = encodeURIComponent('files(id,name)');
   const found = await driveFetch<{ files: Array<{ id: string; name: string }> }>(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&pageSize=1`);
   if (found.files?.[0]?.id) return found.files[0].id;
@@ -112,11 +123,16 @@ async function ensureFolder(): Promise<string> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      name: FOLDER_NAME,
-      mimeType: 'application/vnd.google-apps.folder'
+      name,
+      mimeType: 'application/vnd.google-apps.folder',
+      ...(parentId ? { parents: [parentId] } : {})
     })
   });
   return created.id;
+}
+
+function ownerLabel(owner: DriveOwner): string {
+  return owner === 'her' ? 'Shrushti documents' : 'Mit documents';
 }
 
 async function driveFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
@@ -130,6 +146,7 @@ async function driveFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
     const text = await response.text();
     throw new Error(text || `Google Drive request failed (${response.status})`);
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
 

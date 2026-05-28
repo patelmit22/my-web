@@ -21,18 +21,23 @@ function docIcon(mimeType: string): string {
 
 export function renderDocumentsPage(state: AppState): string {
   const hasClient = hasDriveClient();
+  const ownerLabel = state.driveOwner === 'her' ? 'Shrushti' : 'Mit';
   const selected = state.docFiles.length
     ? `<div class="doc-selected">${state.docFiles.map(file => `<span>${esc(file.name)}</span>`).join('')}</div>`
     : '<div class="doc-selected muted">no files selected</div>';
   const docs = state.driveDocs.length
-    ? state.driveDocs.map(doc => `<a class="doc-card" href="${esc(doc.webViewLink || doc.webContentLink || '#')}" target="_blank" rel="noreferrer">
+    ? state.driveDocs.map(doc => `<article class="doc-card">
         <div class="doc-icon">${docIcon(doc.mimeType)}</div>
         <div class="doc-copy">
           <div class="doc-name">${esc(doc.name)}</div>
           <div class="doc-meta">${fileSize(doc.size)}${doc.createdTime ? ` · ${fmtDate(doc.createdTime)}` : ''}</div>
         </div>
-      </a>`).join('')
-    : `<div class="empty-inline">no Drive documents loaded yet</div>`;
+        <div class="doc-card-actions">
+          <a class="doc-open" href="${esc(doc.webViewLink || doc.webContentLink || '#')}" target="_blank" rel="noreferrer">open</a>
+          <button class="doc-delete" data-action="delete-drive-doc" data-id="${esc(doc.id)}">delete</button>
+        </div>
+      </article>`).join('')
+    : `<div class="empty-inline">no ${ownerLabel} documents loaded yet</div>`;
 
   return `<section class="page active" id="page-documents">
     <div class="page-header">
@@ -48,22 +53,26 @@ export function renderDocumentsPage(state: AppState): string {
     <div class="drive-panel">
       <div class="drive-panel-head">
         <div>
-          <div class="section-title">My Drive locker</div>
-          <div class="finance-section-sub">Files save in a Drive folder named <strong>mitpatel.family documents</strong>.</div>
+          <div class="section-title">Drive locker</div>
+          <div class="finance-section-sub">Files save in separate Drive folders for Mit and Shrushti.</div>
         </div>
         <div class="finance-section-actions">
           <button class="finance-action compact" data-action="connect-drive" ${!hasClient || state.driveBusy ? 'disabled' : ''}>${state.driveConnected ? 'Drive connected' : 'connect Google Drive'}</button>
           <button class="finance-action compact" data-action="refresh-drive-docs" ${!hasClient || state.driveBusy ? 'disabled' : ''}>refresh</button>
         </div>
       </div>
+      <div class="doc-owner-tabs">
+        <button class="doc-owner-tab ${state.driveOwner === 'me' ? 'active' : ''}" data-action="select-doc-owner" data-owner="me">Mit documents</button>
+        <button class="doc-owner-tab ${state.driveOwner === 'her' ? 'active' : ''}" data-action="select-doc-owner" data-owner="her">Shrushti documents</button>
+      </div>
       <div class="doc-upload-row">
         <button class="doc-drop" data-action="choose-doc-files" ${!hasClient || state.driveBusy ? 'disabled' : ''}>
           <span>+</span>
-          choose documents
+          choose ${ownerLabel} documents
         </button>
         <div class="doc-upload-copy">
           ${selected}
-          <button class="btn-primary doc-upload-btn" data-action="upload-docs" ${!hasClient || state.driveBusy || !state.docFiles.length ? 'disabled' : ''}>${state.driveBusy ? 'working...' : 'upload to Drive'}</button>
+          <button class="btn-primary doc-upload-btn" data-action="upload-docs" ${!hasClient || state.driveBusy || !state.docFiles.length ? 'disabled' : ''}>${state.driveBusy ? 'working...' : `upload to ${ownerLabel}'s Drive folder`}</button>
         </div>
       </div>
       <input id="doc-files" type="file" multiple hidden>

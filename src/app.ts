@@ -19,9 +19,9 @@ import { Lightbox } from './components/Lightbox';
 import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
-import { connectDrive, listDriveDocs, uploadDriveDoc } from './api/driveApi';
+import { connectDrive, deleteDriveDoc, listDriveDocs, uploadDriveDoc } from './api/driveApi';
 import { state } from './state/appState';
-import type { AtlasEntry, AtlasSection, FinanceKind, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
+import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
 import { fileToPick, releasePicks, serializeMedia } from './utils/media';
 import {
@@ -195,11 +195,17 @@ export class DashboardApp {
       case 'refresh-drive-docs':
         await this.refreshDriveDocs();
         break;
+      case 'select-doc-owner':
+        await this.selectDocumentOwner((target.dataset.owner as DriveOwner) || 'me');
+        break;
       case 'choose-doc-files':
         qs<HTMLInputElement>('#doc-files').click();
         break;
       case 'upload-docs':
         await this.uploadDocuments();
+        break;
+      case 'delete-drive-doc':
+        if (confirm('delete this document from Google Drive?')) await this.deleteDocument(target.dataset.id || '');
         break;
       case 'close-modal':
         closeModal(target.dataset.modal || '');
@@ -378,8 +384,17 @@ export class DashboardApp {
 
   private handleDocumentFiles(files: FileList | null): void {
     state.docFiles = files ? Array.from(files) : [];
-    state.driveStatus = state.docFiles.length ? `${state.docFiles.length} file${state.docFiles.length === 1 ? '' : 's'} ready to upload` : '';
+    state.driveStatus = state.docFiles.length ? `${state.docFiles.length} file${state.docFiles.length === 1 ? '' : 's'} ready for ${driveOwnerLabel(state.driveOwner)}` : '';
     this.renderApp();
+  }
+
+  private async selectDocumentOwner(owner: DriveOwner): Promise<void> {
+    state.driveOwner = owner;
+    state.docFiles = [];
+    state.driveDocs = [];
+    state.driveStatus = `${driveOwnerLabel(owner)} selected`;
+    this.renderApp();
+    if (state.driveConnected) await this.refreshDriveDocs();
   }
 
   private async connectDriveAndLoad(): Promise<void> {
@@ -389,7 +404,7 @@ export class DashboardApp {
       await connectDrive();
       state.driveConnected = true;
       state.driveStatus = 'Google Drive connected';
-      state.driveDocs = await listDriveDocs();
+      state.driveDocs = await listDriveDocs(state.driveOwner);
       this.toast.show('Drive connected ✓', 'ok');
     } catch (error) {
       console.error('Drive connect failed', error);
@@ -406,9 +421,9 @@ export class DashboardApp {
     state.driveStatus = 'loading Drive documents...';
     this.renderApp();
     try {
-      state.driveDocs = await listDriveDocs();
+      state.driveDocs = await listDriveDocs(state.driveOwner);
       state.driveConnected = true;
-      state.driveStatus = `loaded ${state.driveDocs.length} Drive document${state.driveDocs.length === 1 ? '' : 's'}`;
+      state.driveStatus = `loaded ${state.driveDocs.length} ${driveOwnerLabel(state.driveOwner)} document${state.driveDocs.length === 1 ? '' : 's'}`;
     } catch (error) {
       console.error('Drive refresh failed', error);
       state.driveStatus = error instanceof Error ? error.message : 'Drive refresh failed';
@@ -426,18 +441,38 @@ export class DashboardApp {
     try {
       const total = state.docFiles.length;
       for (let i = 0; i < total; i += 1) {
-        state.driveStatus = `uploading ${i + 1}/${total}: ${state.docFiles[i].name}`;
-        await uploadDriveDoc(state.docFiles[i]);
+        state.driveStatus = `uploading ${i + 1}/${total} to ${driveOwnerLabel(state.driveOwner)}: ${state.docFiles[i].name}`;
+        await uploadDriveDoc(state.docFiles[i], state.driveOwner);
       }
       state.docFiles = [];
-      state.driveDocs = await listDriveDocs();
+      state.driveDocs = await listDriveDocs(state.driveOwner);
       state.driveConnected = true;
-      state.driveStatus = 'uploaded to Google Drive ✓';
+      state.driveStatus = `uploaded to ${driveOwnerLabel(state.driveOwner)} Drive folder ✓`;
       this.toast.show('documents uploaded ✓', 'ok');
     } catch (error) {
       console.error('Drive upload failed', error);
       state.driveStatus = error instanceof Error ? error.message : 'Drive upload failed';
       this.toast.show(`upload failed: ${state.driveStatus}`, 'err');
+    } finally {
+      state.driveBusy = false;
+      this.renderApp();
+    }
+  }
+
+  private async deleteDocument(id: string): Promise<void> {
+    if (!id) return;
+    state.driveBusy = true;
+    state.driveStatus = 'deleting document...';
+    this.renderApp();
+    try {
+      await deleteDriveDoc(id);
+      state.driveDocs = await listDriveDocs(state.driveOwner);
+      state.driveStatus = 'document deleted ✓';
+      this.toast.show('document deleted ✓', 'ok');
+    } catch (error) {
+      console.error('Drive delete failed', error);
+      state.driveStatus = error instanceof Error ? error.message : 'Drive delete failed';
+      this.toast.show(`delete failed: ${state.driveStatus}`, 'err');
     } finally {
       state.driveBusy = false;
       this.renderApp();
@@ -801,6 +836,10 @@ function storeLabel(store?: Transaction['store']): string {
   if (store === 'maple_grove') return 'Maple Grove';
   if (store === 'brooklyn_park') return 'Brooklyn Park';
   return 'Subway';
+}
+
+function driveOwnerLabel(owner: DriveOwner): string {
+  return owner === 'her' ? 'Shrushti' : 'Mit';
 }
 
 function optionalFormValue(selector: string): string {

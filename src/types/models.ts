@@ -93,4 +93,6 @@ export interface DriveDoc {
   createdTime?: string;
 }
 
+export type DriveOwner = UserRole;
+
 export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'documents' | 'settings';

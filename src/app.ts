@@ -278,8 +278,8 @@ export class DashboardApp {
       case 'delete-entry':
         if (confirm('delete this story?')) await deleteEntry(target.dataset.id || '');
         break;
-      case 'export-entry-pdf':
-        this.exportEntryPdf(Number(target.dataset.id || 0));
+      case 'export-atlas-pdf':
+        this.exportAtlasPdf();
         break;
       case 'open-lightbox': {
         const entry = state.entries.find(item => String(item.id) === target.dataset.id);
@@ -530,10 +530,10 @@ export class DashboardApp {
     }
   }
 
-  private exportEntryPdf(id: number): void {
-    const entry = state.entries.find(item => Number(item.id) === id);
-    if (!entry) {
-      this.toast.show('story not found', 'err');
+  private exportAtlasPdf(): void {
+    const entries = filteredEntries(state);
+    if (!entries.length) {
+      this.toast.show('no stories to export', 'err');
       return;
     }
     const printWindow = window.open('', '_blank');
@@ -541,20 +541,35 @@ export class DashboardApp {
       this.toast.show('allow popups to create the PDF', 'err');
       return;
     }
-    const media = (entry.media || []).map(item => {
-      if (item.type === 'image') return `<img src="${escapeAttr(item.data)}" alt="${escapeHtml(item.name || 'photo')}">`;
-      return `<p class="video-note">Video attached: ${escapeHtml(item.name || 'video')}</p>`;
+    const title = state.atlasSection === 'protected' ? 'Our relation with protection' : 'Our stories';
+    const stories = entries.map(entry => {
+      const media = (entry.media || []).map(item => {
+        if (item.type === 'image') return `<img src="${escapeAttr(item.data)}" alt="${escapeHtml(item.name || 'photo')}">`;
+        return `<p class="video-note">Video attached: ${escapeHtml(item.name || 'video')}</p>`;
+      }).join('');
+      const tags = [entry.mood, ...(entry.tags || [])]
+        .filter(Boolean)
+        .map(tag => `<span>${escapeHtml(tag || '')}</span>`)
+        .join('');
+      return `<article class="story-block">
+        <div class="meta">${entry.who === 'me' ? 'Mit' : 'Shrushti'} · ${formatPdfDate(entry.date)}</div>
+        <h2>${escapeHtml(entry.title)}</h2>
+        <div class="story">${escapeHtml(entry.body)}</div>
+        ${entry.thought ? `<div class="thought">"${escapeHtml(entry.thought)}"</div>` : ''}
+        ${media ? `<div class="media">${media}</div>` : ''}
+        ${tags ? `<div class="tags">${tags}</div>` : ''}
+      </article>`;
     }).join('');
-    const tags = [entry.mood, ...(entry.tags || [])]
-      .filter(Boolean)
-      .map(tag => `<span>${escapeHtml(tag || '')}</span>`)
-      .join('');
     printWindow.document.write(`<!doctype html>
-      <html><head><meta charset="utf-8"><title>${escapeHtml(entry.title)} PDF</title>
+      <html><head><meta charset="utf-8"><title>${escapeHtml(title)} PDF</title>
       <style>
         body{font-family:Georgia,serif;color:#1f2937;margin:0;padding:36px;line-height:1.7}
+        .cover{border-bottom:2px solid #e5e7eb;margin-bottom:28px;padding-bottom:18px}
+        .cover h1{font-family:Arial,sans-serif;font-size:34px;line-height:1.1;margin:0 0 8px;color:#111827}
+        .cover p{font:14px Arial,sans-serif;color:#6b7280;margin:0}
+        .story-block{break-inside:avoid;margin:0 0 36px;padding-bottom:24px;border-bottom:1px solid #e5e7eb}
         .meta{font:12px Arial,sans-serif;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:18px}
-        h1{font-family:Arial,sans-serif;font-size:32px;line-height:1.15;margin:0 0 18px;color:#111827}
+        h2{font-family:Arial,sans-serif;font-size:28px;line-height:1.15;margin:0 0 18px;color:#111827}
         .story{white-space:pre-wrap;font-size:16px}
         .thought{margin:24px 0;padding:14px 18px;border-left:4px solid #7c5cff;background:#f5f3ff;font-style:italic}
         .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
@@ -565,12 +580,8 @@ export class DashboardApp {
         @media print{body{padding:22mm}.media img{break-inside:avoid}}
       </style></head>
       <body>
-        <div class="meta">${entry.who === 'me' ? 'Mit' : 'Shrushti'} · ${formatPdfDate(entry.date)} · ${entry.section === 'protected' ? 'Our relation with protection' : 'Our stories'}</div>
-        <h1>${escapeHtml(entry.title)}</h1>
-        <div class="story">${escapeHtml(entry.body)}</div>
-        ${entry.thought ? `<div class="thought">"${escapeHtml(entry.thought)}"</div>` : ''}
-        ${media ? `<div class="media">${media}</div>` : ''}
-        ${tags ? `<div class="tags">${tags}</div>` : ''}
+        <section class="cover"><h1>${escapeHtml(title)}</h1><p>${entries.length} stories · exported ${formatPdfDate(new Date().toISOString())}</p></section>
+        ${stories}
         <script>window.onload=()=>setTimeout(()=>window.print(),250);</script>
       </body></html>`);
     printWindow.document.close();

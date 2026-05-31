@@ -78,6 +78,7 @@
 .page.active{display:block}
 
 .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.8rem;gap:1rem;flex-wrap:wrap}
+.page-actions{display:flex;gap:0.65rem;align-items:center;flex-wrap:wrap}
 .page-title{font-family:var(--font-ui);font-size:2rem;font-weight:700;letter-spacing:-0.02em}
 .page-sub{color:var(--ink-dim);font-size:0.9rem;margin-top:0.2rem}
 .btn-ghost{
@@ -109,8 +110,9 @@
   .main{padding:1rem 1rem 6rem}
   .page-title{font-size:1.5rem}
   .page-header{align-items:stretch;margin-bottom:1rem}
-  .page-header>div,.page-header .btn-accent{width:100%}
-  .page-header .btn-accent{justify-content:center}
+  .page-header>div,.page-header .btn-accent,.page-actions{width:100%}
+  .page-actions{display:grid;grid-template-columns:1fr;gap:0.55rem}
+  .page-actions .btn-accent,.page-actions .btn-ghost{justify-content:center;width:100%}
   .hero{padding:1.6rem 1.4rem;border-radius:18px}
   .hero-greet{font-size:1.7rem}
   .tiles{grid-template-columns:1fr;gap:0.8rem}

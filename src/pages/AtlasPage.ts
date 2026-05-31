@@ -34,7 +34,7 @@ export function renderAtlasPage(state: AppState): string {
   const list = filteredEntries(state);
   const active = sections.find(section => section.key === state.atlasSection) || sections[0];
   return `<section class="page active" id="page-atlas">
-    <div class="page-header"><div><div class="page-title">Atlas</div><div class="page-sub">two spaces for the stories you both want to keep</div></div><button class="btn-accent" data-action="open-entry-modal">+ write</button></div>
+    <div class="page-header"><div><div class="page-title">Atlas</div><div class="page-sub">two spaces for the stories you both want to keep</div></div><div class="page-actions"><button class="btn-ghost" data-action="export-atlas-pdf">PDF all stories</button><button class="btn-accent" data-action="open-entry-modal">+ write</button></div></div>
     <div class="atlas-wrap">
       <div class="atlas-section-tabs">
         ${sections.map(section => `<button class="atlas-section ${state.atlasSection === section.key ? 'active' : ''}" data-action="atlas-section" data-section="${section.key}">
@@ -61,10 +61,7 @@ export function renderEntriesList(state: AppState, list = filteredEntries(state)
     ${renderMedia(entry)}
     ${entry.thought ? `<div class="e-thought">"${esc(entry.thought)}"</div>` : ''}
     <div class="e-tags">${entry.mood ? `<span class="e-tag">${esc(entry.mood)}</span>` : ''}${(entry.tags || []).map(tag => `<span class="e-tag">${esc(tag)}</span>`).join('')}</div>
-    <div class="entry-actions">
-      <button class="e-pdf" data-action="export-entry-pdf" data-id="${entry.id}">PDF</button>
-      <button class="e-del" data-action="delete-entry" data-id="${entry.id}">delete</button>
-    </div>
+    <div class="entry-actions"><button class="e-del" data-action="delete-entry" data-id="${entry.id}">delete</button></div>
   </div>`).join('');
 }
 

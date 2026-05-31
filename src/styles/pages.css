@@ -419,8 +419,7 @@
   background:var(--glass);border:1px solid var(--glass-border);color:var(--ink-dim);
 }
 .entry-actions{display:flex;justify-content:flex-end;gap:0.45rem;margin-top:0.9rem}
-.e-pdf,.e-del{background:none;border:1px solid var(--glass-border);color:var(--ink-mute);cursor:pointer;font-size:0.7rem;font-family:var(--font-mono);padding:0.3rem 0.58rem;border-radius:999px}
-.e-pdf:hover{color:#bfdbfe;background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.26)}
+.e-del{background:none;border:1px solid var(--glass-border);color:var(--ink-mute);cursor:pointer;font-size:0.7rem;font-family:var(--font-mono);padding:0.3rem 0.58rem;border-radius:999px}
 .e-del:hover{color:var(--err);background:rgba(239,68,68,0.1)}
 
 .media-grid{display:grid;gap:4px;margin-top:0.9rem;border-radius:10px;overflow:hidden}

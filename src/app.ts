@@ -19,7 +19,7 @@ import { Lightbox } from './components/Lightbox';
 import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
-import { connectDrive, deleteDriveDoc, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
+import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
 import { state } from './state/appState';
 import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
@@ -45,6 +45,7 @@ export class DashboardApp {
   private readonly toast = new Toast();
   private readonly lightbox = new Lightbox();
   private readonly unsubs: Array<() => void> = [];
+  private driveAutoLoadKey = '';
 
   constructor(private readonly root: HTMLElement) {}
 
@@ -277,6 +278,9 @@ export class DashboardApp {
       case 'delete-entry':
         if (confirm('delete this story?')) await deleteEntry(target.dataset.id || '');
         break;
+      case 'export-entry-pdf':
+        this.exportEntryPdf(Number(target.dataset.id || 0));
+        break;
       case 'open-lightbox': {
         const entry = state.entries.find(item => String(item.id) === target.dataset.id);
         if (entry) this.lightbox.open(entry, Number(target.dataset.index || 0));
@@ -349,7 +353,7 @@ export class DashboardApp {
           : 'connect Google Drive to load documents';
     }
     this.renderApp();
-    if (page === 'documents') void this.autoLoadDriveDocs();
+    if (page === 'documents') void this.maybeAutoLoadDriveDocs();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -406,7 +410,7 @@ export class DashboardApp {
       ? `showing saved ${driveOwnerLabel(owner)} document list`
       : `${driveOwnerLabel(owner)} selected`;
     this.renderApp();
-    if (state.driveConnected || wasDriveConnected()) await this.autoLoadDriveDocs();
+    if (state.driveConnected || wasDriveConnected()) await this.maybeAutoLoadDriveDocs(true);
   }
 
   private async connectDriveAndLoad(): Promise<void> {
@@ -468,6 +472,19 @@ export class DashboardApp {
     }
   }
 
+  private async maybeAutoLoadDriveDocs(force = false): Promise<void> {
+    const freshEnough = driveCacheAge(state.driveOwner) < 5 * 60 * 1000;
+    if (!force && state.driveDocs.length && freshEnough) {
+      state.driveStatus = `showing saved ${driveOwnerLabel(state.driveOwner)} document list`;
+      this.renderApp();
+      return;
+    }
+    const key = `${state.driveOwner}:${Math.floor(Date.now() / 60000)}`;
+    if (!force && this.driveAutoLoadKey === key) return;
+    this.driveAutoLoadKey = key;
+    await this.autoLoadDriveDocs();
+  }
+
   private async uploadDocuments(): Promise<void> {
     if (!state.docFiles.length) return this.toast.show('choose documents first', 'err');
     state.driveBusy = true;
@@ -511,6 +528,52 @@ export class DashboardApp {
       state.driveBusy = false;
       this.renderApp();
     }
+  }
+
+  private exportEntryPdf(id: number): void {
+    const entry = state.entries.find(item => Number(item.id) === id);
+    if (!entry) {
+      this.toast.show('story not found', 'err');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      this.toast.show('allow popups to create the PDF', 'err');
+      return;
+    }
+    const media = (entry.media || []).map(item => {
+      if (item.type === 'image') return `<img src="${escapeAttr(item.data)}" alt="${escapeHtml(item.name || 'photo')}">`;
+      return `<p class="video-note">Video attached: ${escapeHtml(item.name || 'video')}</p>`;
+    }).join('');
+    const tags = [entry.mood, ...(entry.tags || [])]
+      .filter(Boolean)
+      .map(tag => `<span>${escapeHtml(tag || '')}</span>`)
+      .join('');
+    printWindow.document.write(`<!doctype html>
+      <html><head><meta charset="utf-8"><title>${escapeHtml(entry.title)} PDF</title>
+      <style>
+        body{font-family:Georgia,serif;color:#1f2937;margin:0;padding:36px;line-height:1.7}
+        .meta{font:12px Arial,sans-serif;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:18px}
+        h1{font-family:Arial,sans-serif;font-size:32px;line-height:1.15;margin:0 0 18px;color:#111827}
+        .story{white-space:pre-wrap;font-size:16px}
+        .thought{margin:24px 0;padding:14px 18px;border-left:4px solid #7c5cff;background:#f5f3ff;font-style:italic}
+        .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+        .tags span{font:12px Arial,sans-serif;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:4px 10px}
+        .media{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:22px 0}
+        .media img{width:100%;max-height:420px;object-fit:contain;border:1px solid #e5e7eb;border-radius:10px}
+        .video-note{font:13px Arial,sans-serif;color:#6b7280;border:1px dashed #cbd5e1;border-radius:10px;padding:12px}
+        @media print{body{padding:22mm}.media img{break-inside:avoid}}
+      </style></head>
+      <body>
+        <div class="meta">${entry.who === 'me' ? 'Mit' : 'Shrushti'} · ${formatPdfDate(entry.date)} · ${entry.section === 'protected' ? 'Our relation with protection' : 'Our stories'}</div>
+        <h1>${escapeHtml(entry.title)}</h1>
+        <div class="story">${escapeHtml(entry.body)}</div>
+        ${entry.thought ? `<div class="thought">"${escapeHtml(entry.thought)}"</div>` : ''}
+        ${media ? `<div class="media">${media}</div>` : ''}
+        ${tags ? `<div class="tags">${tags}</div>` : ''}
+        <script>window.onload=()=>setTimeout(()=>window.print(),250);</script>
+      </body></html>`);
+    printWindow.document.close();
   }
 
   private async saveTxn(): Promise<void> {
@@ -876,6 +939,23 @@ function driveOwnerLabel(owner: DriveOwner): string {
   if (owner === 'me_work') return 'Mit work';
   if (owner === 'her') return 'Shrushti';
   return 'Mit personal';
+}
+
+function formatPdfDate(date: string): string {
+  return new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function escapeAttr(value: string): string {
+  return escapeHtml(value).replace(/`/g, '&#096;');
 }
 
 function optionalFormValue(selector: string): string {

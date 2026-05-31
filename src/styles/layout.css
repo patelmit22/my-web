@@ -108,16 +108,51 @@
   .sb-tooltip{display:none}
   .main{padding:1rem 1rem 6rem}
   .page-title{font-size:1.5rem}
+  .page-header{align-items:stretch;margin-bottom:1rem}
+  .page-header>div,.page-header .btn-accent{width:100%}
+  .page-header .btn-accent{justify-content:center}
   .hero{padding:1.6rem 1.4rem;border-radius:18px}
   .hero-greet{font-size:1.7rem}
+  .tiles{grid-template-columns:1fr;gap:0.8rem}
+  .tile{padding:1rem}
   .board{grid-template-columns:1fr;gap:0.8rem}
   .col{min-height:auto}
+  .kpi-row{grid-template-columns:1fr;gap:0.75rem}
   .finance-kpi-row{grid-template-columns:1fr}
   .finance-grid{grid-template-columns:1fr}
+  .txn{grid-template-columns:auto 1fr;gap:0.7rem}
+  .txn-amount,.txn-del{grid-column:2}
+  .finance-section-head,.finance-panel-head{display:block}
+  .finance-section-actions{margin-top:0.75rem}
+  .finance-action{width:100%;justify-content:center;text-align:center}
   .doc-owner-tabs{grid-template-columns:1fr}
   .doc-upload-row{grid-template-columns:1fr}
+  .doc-card{align-items:flex-start;flex-wrap:wrap}
+  .doc-card-actions{width:100%;justify-content:flex-start;padding-left:3.9rem}
+  .doc-grid{grid-template-columns:1fr}
   .atlas-section-tabs{grid-template-columns:1fr}
   .entries-grid{grid-template-columns:1fr}
-  .games-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .entry{padding:1rem}
+  .e-title{font-size:1.12rem}
+  .e-body{font-size:0.92rem;line-height:1.65}
+  .media-grid.two,.media-grid.many{grid-template-columns:1fr 1fr}
+  .games-grid{grid-template-columns:1fr}
+  .game-now{padding:1rem}
+  .game-now::before{position:static;display:block;width:100%;margin-bottom:-0.4rem}
   .game-detail-hero{grid-template-columns:1fr}
+  .field-row{grid-template-columns:1fr}
+  .work-detail-media,.game-detail-media{grid-template-columns:1fr}
+}
+
+@media (max-width:420px){
+  .main{padding:0.85rem 0.75rem 6.25rem}
+  .sb-item{width:42px;height:42px}
+  .sb-item svg{width:21px;height:21px}
+  .hero-greet{font-size:1.45rem}
+  .hero-sub{font-size:0.9rem}
+  .kpi{padding:1rem}
+  .kpi-value{font-size:1.35rem}
+  .doc-card-actions{padding-left:0}
+  .game-tabs,.atlas-filter{display:grid;grid-template-columns:1fr 1fr}
+  .gtab{width:100%;text-align:center}
 }

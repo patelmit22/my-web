@@ -45,7 +45,7 @@ export function renderTaskModal(state: AppState): string {
       <div class="field">
         <label class="field-label">pictures</label>
         <button class="media-drop" data-action="choose-work-media">take or upload pictures</button>
-        <input type="file" id="m-kfiles" accept="image/*" capture="environment" multiple hidden>
+        <input type="file" id="m-kfiles" accept="image/*" multiple hidden>
         <div class="media-help">pictures compress automatically before saving.</div>
         <div class="mprev" id="m-kprev">${renderWorkMediaPreviews(state)}</div>
       </div>
@@ -71,7 +71,7 @@ export function renderTaskDetailModal(state: AppState): string {
       <div class="field">
         <label class="field-label">add more pictures</label>
         <button class="media-drop" data-action="choose-work-detail-media">take or upload pictures</button>
-        <input type="file" id="m-kd-files" accept="image/*" capture="environment" multiple hidden>
+        <input type="file" id="m-kd-files" accept="image/*" multiple hidden>
         <div class="media-help">new pictures compress automatically before saving.</div>
         <div class="mprev" id="m-kd-prev">${renderWorkMediaPreviews(state)}</div>
       </div>

@@ -6,6 +6,7 @@ const FOLDER_NAME = 'mitpatel.family documents';
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
 const CONNECTED_KEY = 'mitpatel_drive_connected_v1';
 const DOC_CACHE_PREFIX = 'mitpatel_drive_docs_v1_';
+const DOC_CACHE_TIME_PREFIX = 'mitpatel_drive_docs_time_v1_';
 
 type TokenResponse = { access_token?: string; error?: string; error_description?: string };
 type TokenClient = {
@@ -52,6 +53,11 @@ export function loadCachedDriveDocs(owner: DriveOwner): DriveDoc[] {
   } catch {
     return [];
   }
+}
+
+export function driveCacheAge(owner: DriveOwner): number {
+  const cachedAt = Number(localStorage.getItem(`${DOC_CACHE_TIME_PREFIX}${owner}`) || 0);
+  return cachedAt ? Date.now() - cachedAt : Number.POSITIVE_INFINITY;
 }
 
 export async function connectDrive(options: { interactive?: boolean } = {}): Promise<void> {
@@ -157,6 +163,7 @@ function ownerLabel(owner: DriveOwner): string {
 
 function cacheDriveDocs(owner: DriveOwner, docs: DriveDoc[]): void {
   localStorage.setItem(`${DOC_CACHE_PREFIX}${owner}`, JSON.stringify(docs));
+  localStorage.setItem(`${DOC_CACHE_TIME_PREFIX}${owner}`, String(Date.now()));
 }
 
 async function driveFetch<T>(url: string, init: RequestInit = {}): Promise<T> {

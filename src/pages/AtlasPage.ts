@@ -61,7 +61,10 @@ export function renderEntriesList(state: AppState, list = filteredEntries(state)
     ${renderMedia(entry)}
     ${entry.thought ? `<div class="e-thought">"${esc(entry.thought)}"</div>` : ''}
     <div class="e-tags">${entry.mood ? `<span class="e-tag">${esc(entry.mood)}</span>` : ''}${(entry.tags || []).map(tag => `<span class="e-tag">${esc(tag)}</span>`).join('')}</div>
-    <button class="e-del" data-action="delete-entry" data-id="${entry.id}">delete</button>
+    <div class="entry-actions">
+      <button class="e-pdf" data-action="export-entry-pdf" data-id="${entry.id}">PDF</button>
+      <button class="e-del" data-action="delete-entry" data-id="${entry.id}">delete</button>
+    </div>
   </div>`).join('');
 }
 

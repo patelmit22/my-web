@@ -4,6 +4,8 @@ import {
   deleteGame,
   deleteTask,
   deleteTransaction,
+  type DataMap,
+  type DataPath,
   removeHerConfig,
   saveEntry as saveEntryApi,
   saveGame as saveGameApi,
@@ -45,6 +47,7 @@ export class DashboardApp {
   private readonly toast = new Toast();
   private readonly lightbox = new Lightbox();
   private readonly unsubs: Array<() => void> = [];
+  private readonly reportedDataErrors = new Set<string>();
   private driveAutoLoadKey = '';
 
   constructor(private readonly root: HTMLElement) {}
@@ -61,6 +64,7 @@ export class DashboardApp {
       }
       state.currentUser = await resolveCurrentUser(user.email || '');
       state.activePage = 'home';
+      this.hydrateCachedData();
       this.renderApp();
       this.subscribeToData();
     });
@@ -366,18 +370,22 @@ export class DashboardApp {
       }),
       subscribeList('entries', entries => {
         state.entries = entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        saveCachedList('entries', state.entries);
         this.renderActiveDataPage('atlas');
       }, error => this.showDataError('Atlas entries', error)),
       subscribeList('txns', txns => {
         state.txns = txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        saveCachedList('txns', state.txns);
         this.renderActiveDataPage('finance');
       }, error => this.showDataError('Finance', error)),
       subscribeList('tasks', tasks => {
         state.tasks = tasks;
+        saveCachedList('tasks', state.tasks);
         this.renderActiveDataPage('work');
       }, error => this.showDataError('Work board', error)),
       subscribeList('games', games => {
         state.games = games;
+        saveCachedList('games', state.games);
         this.renderActiveDataPage('games');
       }, error => this.showDataError('Games', error))
     );
@@ -391,9 +399,21 @@ export class DashboardApp {
     if (state.activePage === page || state.activePage === 'home') this.renderApp();
   }
 
+  private hydrateCachedData(): void {
+    state.entries = loadCachedList('entries').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    state.txns = loadCachedList('txns').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    state.tasks = loadCachedList('tasks');
+    state.games = loadCachedList('games');
+  }
+
   private showDataError(area: string, error: Error): void {
     console.error(`${area} sync failed`, error);
-    this.toast.show(`${area} sync failed: ${error.message || 'check Firebase rules'}`, 'err');
+    if (this.reportedDataErrors.has(area)) return;
+    this.reportedDataErrors.add(area);
+    const message = error.message?.includes('permission_denied')
+      ? `${area} blocked by Firebase rules. Your saved data is still in Firebase; update Realtime Database rules.`
+      : `${area} sync failed: ${error.message || 'check Firebase rules'}`;
+    this.toast.show(message, 'err');
   }
 
   private handleDocumentFiles(files: FileList | null): void {
@@ -967,6 +987,22 @@ function escapeHtml(value: string): string {
 
 function escapeAttr(value: string): string {
   return escapeHtml(value).replace(/`/g, '&#096;');
+}
+
+function saveCachedList<TPath extends DataPath>(path: TPath, items: DataMap[TPath][]): void {
+  try {
+    localStorage.setItem(`mitpatel_cache_${path}_v1`, JSON.stringify(items));
+  } catch {
+    // Cache is only a display fallback; Firebase remains the source of truth.
+  }
+}
+
+function loadCachedList<TPath extends DataPath>(path: TPath): DataMap[TPath][] {
+  try {
+    return JSON.parse(localStorage.getItem(`mitpatel_cache_${path}_v1`) || '[]') as DataMap[TPath][];
+  } catch {
+    return [];
+  }
 }
 
 function optionalFormValue(selector: string): string {

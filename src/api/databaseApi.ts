@@ -1,8 +1,8 @@
 import type { AtlasEntry, Game, HerConfig, Transaction, WorkTask } from '../types/models';
 import { db } from './firebaseClient';
 
-type DataPath = 'entries' | 'txns' | 'tasks' | 'games';
-type DataMap = {
+export type DataPath = 'entries' | 'txns' | 'tasks' | 'games';
+export type DataMap = {
   entries: AtlasEntry;
   txns: Transaction;
   tasks: WorkTask;

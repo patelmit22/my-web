@@ -5,6 +5,7 @@ export interface AppState {
   currentUser: CurrentUser | null;
   activePage: PageId;
   atlasSection: AtlasSection;
+  atlasSearch: string;
   entryFilter: 'all' | 'me' | 'her';
   txnKind: FinanceKind;
   gameFilter: 'all' | Game['status'];
@@ -35,6 +36,7 @@ export const state: AppState = {
   currentUser: null,
   activePage: 'home',
   atlasSection: 'stories',
+  atlasSearch: '',
   entryFilter: 'all',
   txnKind: 'option',
   gameFilter: 'all',

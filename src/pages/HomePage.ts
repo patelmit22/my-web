@@ -22,23 +22,23 @@ export function renderHomePage(state: AppState): string {
       <div class="hero-time" id="now-time">${greeting.timestamp}</div>
     </div>
     <div class="tiles">
-      <button class="tile" data-action="nav" data-page="finance" style="--tile-bg:linear-gradient(135deg,#22c55e,#16a34a);--tile-glow:rgba(34,197,94,0.25)">
+      <button class="tile tile-finance" data-action="nav" data-page="finance">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 0 010 7H6"/></svg></div>
         <div class="tile-name">Finance</div><div class="tile-desc">income, spend, balance</div><div class="tile-stat">$${balance.toFixed(0)} balance</div>
       </button>
-      <button class="tile" data-action="nav" data-page="work" style="--tile-bg:linear-gradient(135deg,#22d3ee,#0891b2);--tile-glow:rgba(34,211,238,0.25)">
+      <button class="tile tile-work" data-action="nav" data-page="work">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M16 4v16"/></svg></div>
         <div class="tile-name">Work board</div><div class="tile-desc">to-do, doing, done</div><div class="tile-stat">${openTasks} open · ${doneTasks} done</div>
       </button>
-      <button class="tile" data-action="nav" data-page="atlas" style="--tile-bg:linear-gradient(135deg,#f472b6,#db2777);--tile-glow:rgba(244,114,182,0.3)">
+      <button class="tile tile-atlas" data-action="nav" data-page="atlas">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h12a3 3 0 013 3v13a2 2 0 00-2-2H4z"/><path d="M4 4v16"/></svg></div>
         <div class="tile-name">Atlas</div><div class="tile-desc">our stories &amp; memories</div><div class="tile-stat">${state.entries.length} ${state.entries.length === 1 ? 'entry' : 'entries'}</div>
       </button>
-      <button class="tile" data-action="nav" data-page="games" style="--tile-bg:linear-gradient(135deg,#7c5cff,#4f46e5);--tile-glow:rgba(124,92,255,0.3)">
+      <button class="tile tile-games" data-action="nav" data-page="games">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="11" rx="3"/><path d="M7 12h3M8.5 10.5v3M14 11h.01M17 13h.01"/></svg></div>
         <div class="tile-name">Games</div><div class="tile-desc">what i'm playing</div><div class="tile-stat">${state.games.length} total · ${playing} playing</div>
       </button>
-      <button class="tile" data-action="nav" data-page="documents" style="--tile-bg:linear-gradient(135deg,#f59e0b,#ef4444);--tile-glow:rgba(245,158,11,0.25)">
+      <button class="tile tile-documents" data-action="nav" data-page="documents">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg></div>
         <div class="tile-name">Documents</div><div class="tile-desc">Google Drive locker</div><div class="tile-stat">${state.driveDocs.length} loaded</div>
       </button>

@@ -31,6 +31,7 @@
   cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
   color:var(--ink-dim);
 }
+.sb-item.is-hidden{display:none}
 .sb-item:hover{background:var(--glass);color:var(--ink);transform:scale(1.06)}
 .sb-item.active{
   background:linear-gradient(135deg,rgba(124,92,255,0.25),rgba(34,211,238,0.15));

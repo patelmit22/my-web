@@ -116,7 +116,24 @@ export class DashboardApp {
 
     document.addEventListener('input', event => {
       const target = event.target as HTMLElement;
-      if (target.id === 'atlas-search') this.refreshEntriesList();
+      if (target.id === 'atlas-search') {
+        state.atlasSearch = (target as HTMLInputElement).value;
+        this.refreshEntriesList();
+      }
+    });
+
+    document.addEventListener('error', event => {
+      const target = event.target as HTMLElement;
+      if (target instanceof HTMLImageElement && target.classList.contains('cover-img')) {
+        target.hidden = true;
+      }
+    }, true);
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        document.querySelectorAll('.modal-backdrop.open').forEach(modal => closeModal(modal.id));
+        this.lightbox.close();
+      }
     });
 
     document.addEventListener('change', event => {

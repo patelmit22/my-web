@@ -14,7 +14,7 @@ function icon(name: PageId | 'settings'): string {
 }
 
 function navItem(page: PageId | 'settings', label: string, active: PageId, hidden = false): string {
-  return `<button class="sb-item ${active === page ? 'active' : ''}" data-action="nav" data-page="${page}" ${hidden ? 'style="display:none"' : ''}>
+  return `<button class="sb-item ${active === page ? 'active' : ''} ${hidden ? 'is-hidden' : ''}" data-action="nav" data-page="${page}">
     ${icon(page)}
     <span class="sb-tooltip">${label}</span>
   </button>`;

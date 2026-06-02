@@ -15,8 +15,7 @@ function entrySection(entry: AtlasEntry): AtlasSection {
 }
 
 export function filteredEntries(state: AppState): AtlasEntry[] {
-  const input = document.getElementById('atlas-search') as HTMLInputElement | null;
-  const q = (input?.value || '').toLowerCase().trim();
+  const q = state.atlasSearch.toLowerCase().trim();
   let list = state.entries.filter(entry => entrySection(entry) === state.atlasSection);
   list = list.filter(entry => state.entryFilter === 'all' || entry.who === state.entryFilter);
   if (q) {
@@ -42,7 +41,7 @@ export function renderAtlasPage(state: AppState): string {
         </button>`).join('')}
       </div>
       <div class="atlas-section-title">${active.name}</div>
-      <input class="auth-input" id="atlas-search" placeholder="search entries..." value="" data-action="atlas-search" style="margin-bottom:0.8rem">
+      <input class="auth-input atlas-search" id="atlas-search" placeholder="search entries..." value="${esc(state.atlasSearch)}" data-action="atlas-search">
       <div class="atlas-filter">
         ${(['all', 'me', 'her'] as const).map(filter => `<button class="gtab ${state.entryFilter === filter ? 'active' : ''}" data-action="atlas-filter" data-filter="${filter}">${filter === 'all' ? 'all' : filter === 'me' ? 'mine' : 'hers'}</button>`).join('')}
       </div>
@@ -53,7 +52,7 @@ export function renderAtlasPage(state: AppState): string {
 
 export function renderEntriesList(state: AppState, list = filteredEntries(state)): string {
   if (!list.length) {
-    return '<div style="text-align:center;color:var(--ink-mute);padding:3rem 1rem;font-family:var(--font-hand);font-size:1.3rem">nothing yet — hit + write to add the first</div>';
+    return '<div class="empty-state">nothing yet — hit + write to add the first</div>';
   }
   return list.map(entry => `<div class="entry">
     <div class="e-head"><span class="e-who ${entry.who}">${entry.who === 'me' ? 'Me' : 'Her'}</span><span class="e-date">${fmtDate(entry.date)}</span></div>
@@ -90,8 +89,8 @@ export function renderEntryModal(state: AppState): string {
       <div class="field"><label class="field-label">the story</label><textarea class="field-ta" id="m-eb" placeholder="write it out..."></textarea></div>
       <div class="field"><label class="field-label">a thought</label><input class="field-input" id="m-eth" placeholder="one line that sums it up"></div>
       <div class="field"><label class="field-label">mood</label><div class="chips" id="m-emood">${moods.map(mood => `<button class="chip ${state.selectedMood === mood ? 'sel' : ''}" data-action="pick-mood" data-mood="${mood}">${mood}</button>`).join('')}</div></div>
-      <div class="field"><label class="field-label">photos &amp; videos <span style="color:var(--ink-mute);font-weight:400">(up to 15)</span></label><div class="upload-box" data-action="choose-media">📷 🎥 tap to add</div><input type="file" id="m-efiles" accept="image/*,video/*" multiple style="display:none"><div class="preview-row" id="m-eprev">${renderMediaPreviews(state)}</div></div>
-      <div class="field"><label class="field-label">tags <span style="color:var(--ink-mute);font-weight:400">(comma separated)</span></label><input class="field-input" id="m-etg"></div>
+      <div class="field"><label class="field-label">photos &amp; videos <span class="label-note">(up to 15)</span></label><div class="upload-box" data-action="choose-media">📷 🎥 tap to add</div><input type="file" id="m-efiles" accept="image/*,video/*" multiple hidden><div class="preview-row" id="m-eprev">${renderMediaPreviews(state)}</div></div>
+      <div class="field"><label class="field-label">tags <span class="label-note">(comma separated)</span></label><input class="field-input" id="m-etg"></div>
       <button class="btn-primary" id="m-save" data-action="save-entry">save entry ✦</button>
     </div>
   </div>`;

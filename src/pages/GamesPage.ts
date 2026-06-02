@@ -12,7 +12,7 @@ export function renderGamesPage(state: AppState): string {
     ${now ? `<button class="game-now" data-action="open-game-detail" data-id="${esc(now.id)}"><div class="game-now-icon">🎮</div><div class="game-now-text"><div class="game-now-label">currently playing</div><div class="game-now-title">${esc(now.name)}</div><div class="game-now-platform">${esc(now.platform || '')}</div>${now.story ? `<div class="game-now-story">${esc(now.story).slice(0, 140)}${now.story.length > 140 ? '...' : ''}</div>` : ''}</div></button>` : ''}
     <div class="game-tabs">${filters.map(filter => `<button class="gtab ${state.gameFilter === filter ? 'active' : ''}" data-action="game-filter" data-filter="${filter}">${filter}</button>`).join('')}</div>
     <div class="games-grid">${list.length ? list.map(game => `<article class="game-card" data-action="open-game-detail" data-id="${esc(game.id)}" tabindex="0">
-      <div class="game-cover" style="--g1:${game.c1 || '#4338ca'};--g2:${game.c2 || '#7c3aed'}">${game.cover ? `<img src="${esc(game.cover)}" onerror="this.style.display='none'">` : '🎮'}</div>
+      ${renderGameCover(game.cover, game.c1, game.c2, 'game-cover')}
       <div class="game-name">${esc(game.name)}</div><div class="game-platform">${esc(game.platform || '')}</div>
       ${game.story ? `<div class="game-card-story">${esc(game.story).slice(0, 90)}${game.story.length > 90 ? '...' : ''}</div>` : ''}
       <div class="game-card-meta">${game.media?.length ? `<span>${game.media.length} media</span>` : '<span>open details</span>'}${game.url ? '<span>link</span>' : ''}</div>
@@ -38,7 +38,7 @@ export function renderGameModal(state: AppState): string {
         <div class="mprev" id="m-gcover-prev">${renderGameCoverPreview(state)}</div>
       </div>
       <div class="field"><label class="field-label">game / PS store / trailer URL (optional)</label><input class="field-input" id="m-gurl" placeholder="https://..."></div>
-      <div class="field"><label class="field-label">PS5 clip URLs <span style="color:var(--ink-mute);font-weight:400">(one per line, no storage used)</span></label><textarea class="field-ta clip-url-ta" id="m-gclips" placeholder="paste PS App clip links here..."></textarea></div>
+      <div class="field"><label class="field-label">PS5 clip URLs <span class="label-note">(one per line, no storage used)</span></label><textarea class="field-ta clip-url-ta" id="m-gclips" placeholder="paste PS App clip links here..."></textarea></div>
       <div class="field"><label class="field-label">game story / notes</label><textarea class="field-ta game-story-ta" id="m-gstory" placeholder="write what happened, why you liked it, where you are in the story, trophies, memories..."></textarea></div>
       <div class="field">
         <label class="field-label">photos & short videos</label>
@@ -47,7 +47,7 @@ export function renderGameModal(state: AppState): string {
         <div class="media-help">images compress automatically. videos are protected with an 8 MB limit so Firebase does not fill up.</div>
         <div class="mprev" id="m-gprev">${renderGameMediaPreviews(state)}</div>
       </div>
-      <div class="field"><label class="field-label" style="display:flex;align-items:center;gap:0.5rem"><input type="checkbox" id="m-gnow" style="width:auto"> mark as currently playing</label></div>
+      <div class="field"><label class="field-label check-label"><input type="checkbox" id="m-gnow"> mark as currently playing</label></div>
       <button class="btn-primary" id="m-gsave" data-action="save-game">add game</button>
     </div>
   </div>`;
@@ -61,7 +61,7 @@ export function renderGameDetailModal(state: AppState): string {
   return `<div class="modal-backdrop" id="modal-game-detail">
     <div class="modal game-detail-modal"><button class="modal-close" data-action="close-modal" data-modal="modal-game-detail">×</button>
       <div class="game-detail-hero">
-        <div class="game-detail-cover" style="--g1:${game.c1 || '#4338ca'};--g2:${game.c2 || '#7c3aed'}">${game.cover ? `<img src="${esc(game.cover)}" onerror="this.style.display='none'">` : '🎮'}</div>
+        ${renderGameCover(game.cover, game.c1, game.c2, 'game-detail-cover')}
         <div class="game-detail-copy">
           <div class="game-status ${game.status} static">${game.status}</div>
           <div class="modal-title">${esc(game.name)}</div>
@@ -82,7 +82,7 @@ export function renderGameDetailModal(state: AppState): string {
           <div class="media-help">uploaded cover is compressed automatically.</div>
           <div class="mprev" id="m-gd-cover-prev">${renderGameCoverPreview(state)}</div>
         </div>
-        <div class="field"><label class="field-label">PS5 clip URLs <span style="color:var(--ink-mute);font-weight:400">(one per line, no storage used)</span></label><textarea class="field-ta clip-url-ta" id="m-gd-clips">${esc((game.clips || []).join('\n'))}</textarea></div>
+        <div class="field"><label class="field-label">PS5 clip URLs <span class="label-note">(one per line, no storage used)</span></label><textarea class="field-ta clip-url-ta" id="m-gd-clips">${esc((game.clips || []).join('\n'))}</textarea></div>
         <div class="field"><label class="field-label">add or edit story</label><textarea class="field-ta game-story-ta" id="m-gd-story">${esc(game.story || '')}</textarea></div>
         <div class="field">
           <label class="field-label">add more photos or short videos</label>
@@ -116,6 +116,13 @@ export function renderGameCoverPreview(state: AppState): string {
 function renderClipLinks(clips: string[]): string {
   if (!clips.length) return '';
   return `<div class="clip-links">${clips.map((clip, index) => `<a href="${esc(clip)}" target="_blank" rel="noopener">watch PS5 clip ${index + 1} ↗</a>`).join('')}</div>`;
+}
+
+function renderGameCover(cover = '', c1 = '#4338ca', c2 = '#7c3aed', className: 'game-cover' | 'game-detail-cover'): string {
+  return `<div class="${className}" style="--g1:${esc(c1)};--g2:${esc(c2)}">
+    <span class="game-cover-fallback">🎮</span>
+    ${cover ? `<img class="cover-img" src="${esc(cover)}" alt="game cover" loading="lazy">` : ''}
+  </div>`;
 }
 
 function renderGameMedia(media: AtlasMedia[]): string {

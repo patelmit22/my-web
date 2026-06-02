@@ -19,6 +19,9 @@
 .modal-close:hover{color:var(--ink);background:var(--glass)}
 .field{margin-bottom:1rem}
 .field-label{display:block;font-family:var(--font-ui);font-size:0.82rem;font-weight:500;color:var(--ink-dim);margin-bottom:0.4rem}
+.label-note{color:var(--ink-mute);font-weight:400}
+.check-label{display:flex;align-items:center;gap:0.5rem}
+.check-label input{width:auto}
 .field-input,.field-ta,.field-sel{
   width:100%;background:rgba(0,0,0,0.35);border:1px solid var(--glass-border);
   border-radius:10px;padding:0.75rem 0.95rem;color:var(--ink);font-family:var(--font-body);

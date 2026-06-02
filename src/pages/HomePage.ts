@@ -1,5 +1,5 @@
 import type { AppState } from '../state/appState';
-import { greetingTime } from '../utils/format';
+import { currency, greetingTime } from '../utils/format';
 
 export function renderHomePage(state: AppState): string {
   const greeting = greetingTime();
@@ -10,16 +10,33 @@ export function renderHomePage(state: AppState): string {
     return date.getMonth() === month && date.getFullYear() === year;
   });
   const balance = state.txns.reduce((sum, txn) => sum + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
+  const monthIn = monthTxns.filter(txn => txn.type === 'in').reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
+  const monthOut = monthTxns.filter(txn => txn.type === 'out').reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
   const openTasks = state.tasks.filter(task => task.col !== 'done').length;
   const doneTasks = state.tasks.filter(task => task.col === 'done').length;
   const playing = state.games.filter(game => game.status === 'playing').length;
-  void monthTxns;
+  const latestStory = state.entries[0]?.title || 'no story yet';
+  const currentGame = state.games.find(game => game.now)?.name || state.games.find(game => game.status === 'playing')?.name || 'pick a game';
 
   return `<section class="page active" id="page-home">
-    <div class="hero">
-      <div class="hero-greet">good <span id="tod">${greeting.label}</span>, <span class="name" id="hello-name">${state.currentUser?.display.toLowerCase() || 'mit'}</span></div>
-      <div class="hero-sub">your little command center — track money, work, memories, games, and documents all in one place.</div>
-      <div class="hero-time" id="now-time">${greeting.timestamp}</div>
+    <div class="hero home-hero">
+      <div class="home-hero-copy">
+        <div class="home-kicker">mitpatel.family dashboard</div>
+        <div class="hero-greet">good <span id="tod">${greeting.label}</span>, <span class="name" id="hello-name">${state.currentUser?.display.toLowerCase() || 'mit'}</span></div>
+        <div class="hero-sub">your command center for money, work, memories, games, and Drive documents.</div>
+        <div class="hero-time" id="now-time">${greeting.timestamp}</div>
+      </div>
+      <div class="home-orbit" aria-hidden="true">
+        <span class="orbit-card orbit-money">${currency(balance)}</span>
+        <span class="orbit-core">mp</span>
+        <span class="orbit-card orbit-work">${openTasks} open</span>
+      </div>
+    </div>
+    <div class="home-status-grid">
+      <div class="home-status"><span>month income</span><strong>${currency(monthIn)}</strong></div>
+      <div class="home-status"><span>month spent</span><strong class="danger">${currency(monthOut)}</strong></div>
+      <div class="home-status"><span>latest story</span><strong>${latestStory}</strong></div>
+      <div class="home-status"><span>now playing</span><strong>${currentGame}</strong></div>
     </div>
     <div class="tiles">
       <button class="tile tile-finance" data-action="nav" data-page="finance">

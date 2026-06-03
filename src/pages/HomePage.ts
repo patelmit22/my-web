@@ -14,7 +14,11 @@ export function renderHomePage(state: AppState): string {
     const date = new Date(t.date);
     return date.getMonth() === month && date.getFullYear() === year;
   });
-  const balance = state.txns.reduce((sum, txn) => sum + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
+  const personalTxns = state.txns.filter(txn => {
+    const kind = kindOf(txn);
+    return kind === 'option' || kind === 'spending' || kind === 'general';
+  });
+  const personalBalance = personalTxns.reduce((sum, txn) => sum + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
   const monthIn = monthTxns
     .filter(txn => txn.type === 'in' && (kindOf(txn) === 'option' || kindOf(txn) === 'general'))
     .reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
@@ -36,9 +40,9 @@ export function renderHomePage(state: AppState): string {
         <div class="hero-time" id="now-time">${greeting.timestamp}</div>
       </div>
       <div class="home-orbit" aria-hidden="true">
-        <span class="orbit-card orbit-money">${currency(balance)}</span>
+        <span class="orbit-card orbit-money">${currency(personalBalance)}</span>
         <span class="orbit-core">mp</span>
-        <span class="orbit-card orbit-work">${openTasks} open</span>
+        <span class="orbit-card orbit-work">${openTasks} work open</span>
       </div>
     </div>
     <div class="home-status-grid">
@@ -50,7 +54,7 @@ export function renderHomePage(state: AppState): string {
     <div class="tiles">
       <button class="tile tile-finance" data-action="nav" data-page="finance">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 0 010 7H6"/></svg></div>
-        <div class="tile-name">Finance</div><div class="tile-desc">income, spend, balance</div><div class="tile-stat">$${balance.toFixed(0)} balance</div>
+        <div class="tile-name">Finance</div><div class="tile-desc">income, spend, balance</div><div class="tile-stat">${currency(personalBalance)} personal balance</div>
       </button>
       <button class="tile tile-work" data-action="nav" data-page="work">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M16 4v16"/></svg></div>

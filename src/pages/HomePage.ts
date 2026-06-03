@@ -1,5 +1,10 @@
 import type { AppState } from '../state/appState';
+import type { FinanceKind, Transaction } from '../types/models';
 import { currency, greetingTime } from '../utils/format';
+
+function kindOf(txn: Transaction): FinanceKind {
+  return txn.kind || (txn.type === 'out' ? 'spending' : 'general');
+}
 
 export function renderHomePage(state: AppState): string {
   const greeting = greetingTime();
@@ -10,8 +15,12 @@ export function renderHomePage(state: AppState): string {
     return date.getMonth() === month && date.getFullYear() === year;
   });
   const balance = state.txns.reduce((sum, txn) => sum + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
-  const monthIn = monthTxns.filter(txn => txn.type === 'in').reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
-  const monthOut = monthTxns.filter(txn => txn.type === 'out').reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
+  const monthIn = monthTxns
+    .filter(txn => txn.type === 'in' && (kindOf(txn) === 'option' || kindOf(txn) === 'general'))
+    .reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
+  const monthOut = monthTxns
+    .filter(txn => txn.type === 'out' && (kindOf(txn) === 'spending' || kindOf(txn) === 'general'))
+    .reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
   const openTasks = state.tasks.filter(task => task.col !== 'done').length;
   const doneTasks = state.tasks.filter(task => task.col === 'done').length;
   const playing = state.games.filter(game => game.status === 'playing').length;
@@ -33,8 +42,8 @@ export function renderHomePage(state: AppState): string {
       </div>
     </div>
     <div class="home-status-grid">
-      <div class="home-status"><span>month income</span><strong>${currency(monthIn)}</strong></div>
-      <div class="home-status"><span>month spent</span><strong class="danger">${currency(monthOut)}</strong></div>
+      <div class="home-status"><span>personal income</span><strong>${currency(monthIn)}</strong></div>
+      <div class="home-status"><span>personal spent</span><strong class="danger">${currency(monthOut)}</strong></div>
       <div class="home-status"><span>latest story</span><strong>${latestStory}</strong></div>
       <div class="home-status"><span>now playing</span><strong>${currentGame}</strong></div>
     </div>

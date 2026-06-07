@@ -83,7 +83,48 @@ export class DashboardApp {
       ${renderSidebar(state.activePage, state.currentUser)}
       <main class="main">${this.renderCurrentPage()}</main>
     </div>
-    ${renderModals(state)}`;
+    <div id="modal-root">${renderModals(state)}</div>`;
+  }
+
+  private renderView(): void {
+    if (!state.currentUser) {
+      this.renderAuth();
+      return;
+    }
+    const main = document.querySelector<HTMLElement>('.main');
+    const modalRoot = document.getElementById('modal-root');
+    if (!main || !modalRoot) {
+      this.renderApp();
+      return;
+    }
+    this.syncSidebarActiveState();
+    main.innerHTML = this.renderCurrentPage();
+    modalRoot.innerHTML = renderModals(state);
+  }
+
+  private renderMainOnly(): void {
+    const main = document.querySelector<HTMLElement>('.main');
+    if (!main) {
+      this.renderApp();
+      return;
+    }
+    this.syncSidebarActiveState();
+    main.innerHTML = this.renderCurrentPage();
+  }
+
+  private renderModalsOnly(): void {
+    const modalRoot = document.getElementById('modal-root');
+    if (!modalRoot) {
+      this.renderApp();
+      return;
+    }
+    modalRoot.innerHTML = renderModals(state);
+  }
+
+  private syncSidebarActiveState(): void {
+    document.querySelectorAll<HTMLElement>('.sb-item[data-page]').forEach(item => {
+      item.classList.toggle('active', item.dataset.page === state.activePage);
+    });
   }
 
   private renderCurrentPage(): string {
@@ -193,13 +234,13 @@ export class DashboardApp {
       case 'open-txn-modal':
         state.txnKind = (target.dataset.kind as FinanceKind) || 'option';
         state.txnType = this.txnTypeForKind(state.txnKind);
-        this.renderApp();
+        this.renderModalsOnly();
         openModal('modal-txn');
         break;
       case 'select-txn-kind':
         state.txnKind = target.dataset.kind as FinanceKind;
         state.txnType = this.txnTypeForKind(state.txnKind);
-        this.renderApp();
+        this.renderModalsOnly();
         openModal('modal-txn');
         break;
       case 'open-task-modal':
@@ -250,7 +291,7 @@ export class DashboardApp {
         releasePicks(state.workMediaPicks);
         state.workMediaPicks = [];
         state.selectedTaskId = target.dataset.id || null;
-        this.renderApp();
+        this.renderModalsOnly();
         openModal('modal-task-detail');
         break;
       case 'choose-work-media':
@@ -276,11 +317,11 @@ export class DashboardApp {
         break;
       case 'atlas-filter':
         state.entryFilter = target.dataset.filter as typeof state.entryFilter;
-        this.renderApp();
+        this.renderMainOnly();
         break;
       case 'atlas-section':
         state.atlasSection = target.dataset.section as AtlasSection;
-        this.renderApp();
+        this.renderMainOnly();
         break;
       case 'choose-media':
         qs<HTMLInputElement>('#m-efiles').click();
@@ -315,7 +356,7 @@ export class DashboardApp {
         break;
       case 'game-filter':
         state.gameFilter = target.dataset.filter as typeof state.gameFilter;
-        this.renderApp();
+        this.renderMainOnly();
         break;
       case 'open-game-detail':
         releasePicks(state.gameMediaPicks);
@@ -323,7 +364,7 @@ export class DashboardApp {
         state.gameMediaPicks = [];
         state.gameCoverPicks = [];
         state.selectedGameId = target.dataset.id || null;
-        this.renderApp();
+        this.renderModalsOnly();
         openModal('modal-game-detail');
         break;
       case 'choose-game-media':
@@ -373,7 +414,7 @@ export class DashboardApp {
           ? 'reconnecting to Google Drive...'
           : 'connect Google Drive to load documents';
     }
-    this.renderApp();
+    this.renderView();
     if (page === 'documents') void this.maybeAutoLoadDriveDocs();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -383,7 +424,7 @@ export class DashboardApp {
     this.unsubs.push(
       subscribeHerConfig(config => {
         state.herConfig = config;
-        if (state.activePage === 'settings') this.renderApp();
+        if (state.activePage === 'settings') this.renderMainOnly();
       }),
       subscribeList('entries', entries => {
         state.entries = entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -413,7 +454,7 @@ export class DashboardApp {
   }
 
   private renderActiveDataPage(page: PageId): void {
-    if (state.activePage === page || state.activePage === 'home') this.renderApp();
+    if (state.activePage === page || state.activePage === 'home') this.renderMainOnly();
   }
 
   private hydrateCachedData(): void {
@@ -436,7 +477,7 @@ export class DashboardApp {
   private handleDocumentFiles(files: FileList | null): void {
     state.docFiles = files ? Array.from(files) : [];
     state.driveStatus = state.docFiles.length ? `${state.docFiles.length} file${state.docFiles.length === 1 ? '' : 's'} ready for ${driveOwnerLabel(state.driveOwner)}` : '';
-    this.renderApp();
+    this.renderMainOnly();
   }
 
   private async selectDocumentOwner(owner: DriveOwner): Promise<void> {
@@ -446,7 +487,7 @@ export class DashboardApp {
     state.driveStatus = state.driveDocs.length
       ? `showing saved ${driveOwnerLabel(owner)} document list`
       : `${driveOwnerLabel(owner)} selected`;
-    this.renderApp();
+    this.renderMainOnly();
     if (state.driveConnected || wasDriveConnected()) await this.maybeAutoLoadDriveDocs(true);
   }
 
@@ -465,14 +506,14 @@ export class DashboardApp {
       this.toast.show(`Drive failed: ${state.driveStatus}`, 'err');
     } finally {
       state.driveBusy = false;
-      this.renderApp();
+      this.renderMainOnly();
     }
   }
 
   private async refreshDriveDocs(): Promise<void> {
     state.driveBusy = true;
     state.driveStatus = 'loading Drive documents...';
-    this.renderApp();
+    this.renderMainOnly();
     try {
       state.driveDocs = await listDriveDocs(state.driveOwner);
       state.driveConnected = true;
@@ -483,7 +524,7 @@ export class DashboardApp {
       this.toast.show(`Drive failed: ${state.driveStatus}`, 'err');
     } finally {
       state.driveBusy = false;
-      this.renderApp();
+      this.renderMainOnly();
     }
   }
 
@@ -491,7 +532,7 @@ export class DashboardApp {
     if (!wasDriveConnected() && !isDriveConnected()) return;
     state.driveBusy = true;
     if (!state.driveDocs.length) state.driveStatus = 'loading Drive documents...';
-    this.renderApp();
+    this.renderMainOnly();
     try {
       if (!isDriveConnected()) await connectDrive({ interactive: false });
       state.driveDocs = await listDriveDocs(state.driveOwner);
@@ -505,7 +546,7 @@ export class DashboardApp {
         : 'tap connect Google Drive to load documents';
     } finally {
       state.driveBusy = false;
-      this.renderApp();
+      this.renderMainOnly();
     }
   }
 
@@ -513,7 +554,7 @@ export class DashboardApp {
     const freshEnough = driveCacheAge(state.driveOwner) < 5 * 60 * 1000;
     if (!force && state.driveDocs.length && freshEnough) {
       state.driveStatus = `showing saved ${driveOwnerLabel(state.driveOwner)} document list`;
-      this.renderApp();
+      this.renderMainOnly();
       return;
     }
     const key = `${state.driveOwner}:${Math.floor(Date.now() / 60000)}`;
@@ -525,7 +566,7 @@ export class DashboardApp {
   private async uploadDocuments(): Promise<void> {
     if (!state.docFiles.length) return this.toast.show('choose documents first', 'err');
     state.driveBusy = true;
-    this.renderApp();
+    this.renderMainOnly();
     try {
       const total = state.docFiles.length;
       for (let i = 0; i < total; i += 1) {
@@ -543,7 +584,7 @@ export class DashboardApp {
       this.toast.show(`upload failed: ${state.driveStatus}`, 'err');
     } finally {
       state.driveBusy = false;
-      this.renderApp();
+      this.renderMainOnly();
     }
   }
 
@@ -551,7 +592,7 @@ export class DashboardApp {
     if (!id) return;
     state.driveBusy = true;
     state.driveStatus = 'deleting document...';
-    this.renderApp();
+    this.renderMainOnly();
     try {
       await deleteDriveDoc(id);
       state.driveDocs = await listDriveDocs(state.driveOwner);
@@ -563,7 +604,7 @@ export class DashboardApp {
       this.toast.show(`delete failed: ${state.driveStatus}`, 'err');
     } finally {
       state.driveBusy = false;
-      this.renderApp();
+      this.renderMainOnly();
     }
   }
 
@@ -722,7 +763,7 @@ export class DashboardApp {
       releasePicks(state.workMediaPicks);
       state.workMediaPicks = [];
       closeModal('modal-task-detail');
-      this.renderApp();
+      this.renderMainOnly();
       this.toast.show('work updated ✓', 'ok');
     } catch (error) {
       console.error('work update failed', error);
@@ -746,7 +787,7 @@ export class DashboardApp {
     releasePicks(state.mediaPicks);
     state.mediaPicks = [];
     state.selectedMood = '';
-    this.renderApp();
+    this.renderModalsOnly();
   }
 
   private handleMediaFiles(files: FileList | null): void {
@@ -767,7 +808,7 @@ export class DashboardApp {
   private resetWorkModal(): void {
     releasePicks(state.workMediaPicks);
     state.workMediaPicks = [];
-    this.renderApp();
+    this.renderModalsOnly();
   }
 
   private handleWorkMediaFiles(files: FileList | null, previewId = 'm-kprev', inputId = 'm-kfiles'): void {
@@ -795,7 +836,7 @@ export class DashboardApp {
     releasePicks(state.gameCoverPicks);
     state.gameMediaPicks = [];
     state.gameCoverPicks = [];
-    this.renderApp();
+    this.renderModalsOnly();
   }
 
   private handleGameCoverFiles(files: FileList | null, previewId = 'm-gcover-prev', inputId = 'm-gcover-file'): void {
@@ -863,7 +904,7 @@ export class DashboardApp {
       state.mediaPicks = [];
       closeModal('modal-entry');
       state.activePage = 'atlas';
-      this.renderApp();
+      this.renderMainOnly();
       this.toast.show('saved ✓', 'ok');
     } catch (error) {
       console.error('entry save failed', error);
@@ -946,7 +987,7 @@ export class DashboardApp {
       state.gameCoverPicks = [];
       state.selectedGameId = updated.id;
       closeModal('modal-game-detail');
-      this.renderApp();
+      this.renderMainOnly();
       this.toast.show('game updated ✓', 'ok');
     } catch (error) {
       console.error('game update failed', error);

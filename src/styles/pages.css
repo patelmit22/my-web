@@ -406,7 +406,7 @@
 }
 .drive-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
 .drive-panel-head .section-title{margin:0}
-.doc-owner-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.65rem;margin-bottom:1rem}
+.doc-owner-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.65rem;margin-bottom:1rem}
 .doc-owner-tab{
   border:1px solid var(--glass-border);border-radius:14px;
   background:rgba(255,255,255,0.035);color:var(--ink-dim);
@@ -426,9 +426,64 @@
 .doc-selected{min-height:72px;border:1px solid var(--glass-border);border-radius:14px;background:rgba(0,0,0,0.22);padding:0.75rem;display:flex;gap:0.45rem;flex-wrap:wrap;align-content:flex-start}
 .doc-selected span{font-family:var(--font-mono);font-size:0.7rem;color:var(--ink);border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.045);border-radius:999px;padding:0.25rem 0.55rem}
 .doc-selected.muted{color:var(--ink-mute);font-size:0.85rem;align-items:center}
+.doc-selected-list{
+  max-height:300px;
+  overflow:auto;
+  border:1px solid var(--glass-border);
+  border-radius:14px;
+  background:rgba(0,0,0,0.22);
+  padding:0.65rem;
+  display:grid;
+  gap:0.65rem;
+}
+.doc-selected-item{
+  display:grid;
+  grid-template-columns:minmax(180px,1fr) auto minmax(180px,1.1fr) auto;
+  gap:0.6rem;
+  align-items:center;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;
+  background:rgba(255,255,255,0.035);
+  padding:0.6rem;
+}
+.doc-selected-meta{min-width:0}
+.doc-selected-name{
+  display:block;
+  font-family:var(--font-ui);
+  font-weight:800;
+  color:var(--ink);
+  overflow-wrap:anywhere;
+  line-height:1.25;
+}
+.doc-selected-size{display:block;font-family:var(--font-mono);font-size:0.68rem;color:var(--ink-mute);margin-top:0.15rem}
+.doc-rename-label{font-family:var(--font-mono);font-size:0.68rem;color:var(--ink-mute);text-transform:uppercase;letter-spacing:0.08em}
+.doc-rename-input{
+  min-width:0;
+  width:100%;
+  border:1px solid var(--glass-border);
+  border-radius:10px;
+  background:rgba(0,0,0,0.28);
+  color:var(--ink);
+  font:0.82rem var(--font-ui);
+  padding:0.55rem 0.7rem;
+  outline:none;
+}
+.doc-rename-input:focus{border-color:rgba(245,158,11,0.45);box-shadow:0 0 0 3px rgba(245,158,11,0.1)}
+.doc-selected-remove,.doc-clear-btn{
+  border:1px solid rgba(239,68,68,0.24);
+  border-radius:999px;
+  background:rgba(239,68,68,0.08);
+  color:#fca5a5;
+  font-family:var(--font-ui);
+  font-size:0.72rem;
+  font-weight:800;
+  padding:0.4rem 0.65rem;
+  cursor:pointer;
+}
+.doc-clear-btn{align-self:flex-start}
 .doc-upload-btn{margin-top:auto}
 .drive-status{font-family:var(--font-mono);font-size:0.74rem;color:var(--ink-dim);margin-top:0.8rem}
-.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.9rem}
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:0.9rem}
 .doc-card{
   display:flex;gap:0.85rem;align-items:center;text-decoration:none;color:var(--ink);
   border:1px solid var(--glass-border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015));
@@ -437,7 +492,7 @@
 .doc-card:hover{transform:translateY(-2px);border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.08)}
 .doc-icon{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:0.72rem;font-weight:800;color:#fff;flex-shrink:0}
 .doc-copy{min-width:0;flex:1}
-.doc-name{font-family:var(--font-ui);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-name{font-family:var(--font-ui);font-weight:800;white-space:normal;overflow-wrap:anywhere;line-height:1.28}
 .doc-meta{font-family:var(--font-mono);font-size:0.7rem;color:var(--ink-mute);margin-top:0.25rem}
 .doc-card-actions{display:flex;gap:0.45rem;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .doc-open,.doc-delete{
@@ -709,6 +764,16 @@
   }
   .doc-upload-copy{
     width:100%;
+  }
+  .doc-selected-item{
+    grid-template-columns:1fr;
+    align-items:stretch;
+  }
+  .doc-rename-label{
+    margin-bottom:-0.3rem;
+  }
+  .doc-selected-remove{
+    justify-self:start;
   }
   .doc-upload-btn{
     min-height:54px;

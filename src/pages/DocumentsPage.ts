@@ -23,13 +23,21 @@ export function renderDocumentsPage(state: AppState): string {
   const hasClient = hasDriveClient();
   const ownerLabel = sectionLabel(state.driveOwner);
   const selected = state.docFiles.length
-    ? `<div class="doc-selected">${state.docFiles.map(file => `<span>${esc(file.name)}</span>`).join('')}</div>`
+    ? `<div class="doc-selected-list">${state.docFiles.map((file, index) => `<div class="doc-selected-item">
+        <div class="doc-selected-meta">
+          <span class="doc-selected-name" title="${esc(file.name)}">${esc(file.name)}</span>
+          <span class="doc-selected-size">${fileSize(String(file.size))}</span>
+        </div>
+        <label class="doc-rename-label" for="doc-rename-${index}">save as</label>
+        <input class="doc-rename-input" id="doc-rename-${index}" data-doc-index="${index}" value="${esc(state.docFileNames[index] || file.name)}" placeholder="${esc(file.name)}">
+        <button class="doc-selected-remove" data-action="remove-doc-file" data-index="${index}" title="remove this file">remove</button>
+      </div>`).join('')}</div>`
     : '<div class="doc-selected muted">no files selected</div>';
   const docs = state.driveDocs.length
     ? state.driveDocs.map(doc => `<article class="doc-card">
         <div class="doc-icon">${docIcon(doc.mimeType)}</div>
         <div class="doc-copy">
-          <div class="doc-name">${esc(doc.name)}</div>
+          <div class="doc-name" title="${esc(doc.name)}">${esc(doc.name)}</div>
           <div class="doc-meta">${fileSize(doc.size)}${doc.createdTime ? ` · ${fmtDate(doc.createdTime)}` : ''}</div>
         </div>
         <div class="doc-card-actions">
@@ -64,6 +72,7 @@ export function renderDocumentsPage(state: AppState): string {
       <div class="doc-owner-tabs">
         <button class="doc-owner-tab ${state.driveOwner === 'me_personal' ? 'active' : ''}" data-action="select-doc-owner" data-owner="me_personal">Mit personal</button>
         <button class="doc-owner-tab ${state.driveOwner === 'me_work' ? 'active' : ''}" data-action="select-doc-owner" data-owner="me_work">Mit work</button>
+        <button class="doc-owner-tab ${state.driveOwner === 'parents' ? 'active' : ''}" data-action="select-doc-owner" data-owner="parents">Parents</button>
         <button class="doc-owner-tab ${state.driveOwner === 'her' ? 'active' : ''}" data-action="select-doc-owner" data-owner="her">Shrushti documents</button>
       </div>
       <div class="doc-upload-row">
@@ -73,6 +82,7 @@ export function renderDocumentsPage(state: AppState): string {
         </button>
         <div class="doc-upload-copy">
           ${selected}
+          ${state.docFiles.length ? '<button class="btn-ghost small doc-clear-btn" data-action="clear-doc-files">clear selected files</button>' : ''}
           <button class="btn-primary doc-upload-btn" data-action="upload-docs" ${!hasClient || state.driveBusy || !state.docFiles.length ? 'disabled' : ''}>${state.driveBusy ? 'working...' : `upload to ${ownerLabel}'s Drive folder`}</button>
         </div>
       </div>
@@ -85,6 +95,7 @@ export function renderDocumentsPage(state: AppState): string {
 
 function sectionLabel(owner: AppState['driveOwner']): string {
   if (owner === 'me_work') return 'Mit work';
+  if (owner === 'parents') return 'Parents';
   if (owner === 'her') return 'Shrushti';
   return 'Mit personal';
 }

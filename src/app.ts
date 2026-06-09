@@ -161,6 +161,10 @@ export class DashboardApp {
         state.atlasSearch = (target as HTMLInputElement).value;
         this.refreshEntriesList();
       }
+      if (target instanceof HTMLInputElement && target.classList.contains('doc-rename-input')) {
+        const index = Number(target.dataset.docIndex || -1);
+        if (index >= 0) state.docFileNames[index] = target.value;
+      }
     });
 
     document.addEventListener('error', event => {
@@ -263,6 +267,12 @@ export class DashboardApp {
         break;
       case 'choose-doc-files':
         qs<HTMLInputElement>('#doc-files').click();
+        break;
+      case 'remove-doc-file':
+        this.removeDocumentFile(Number(target.dataset.index || 0));
+        break;
+      case 'clear-doc-files':
+        this.clearDocumentFiles();
         break;
       case 'upload-docs':
         await this.uploadDocuments();
@@ -475,14 +485,33 @@ export class DashboardApp {
   }
 
   private handleDocumentFiles(files: FileList | null): void {
-    state.docFiles = files ? Array.from(files) : [];
+    const added = files ? Array.from(files) : [];
+    state.docFiles = [...state.docFiles, ...added];
+    state.docFileNames = [...state.docFileNames, ...added.map(file => file.name)];
     state.driveStatus = state.docFiles.length ? `${state.docFiles.length} file${state.docFiles.length === 1 ? '' : 's'} ready for ${driveOwnerLabel(state.driveOwner)}` : '';
+    const input = document.getElementById('doc-files') as HTMLInputElement | null;
+    if (input) input.value = '';
+    this.renderMainOnly();
+  }
+
+  private removeDocumentFile(index: number): void {
+    state.docFiles.splice(index, 1);
+    state.docFileNames.splice(index, 1);
+    state.driveStatus = state.docFiles.length ? `${state.docFiles.length} file${state.docFiles.length === 1 ? '' : 's'} ready for ${driveOwnerLabel(state.driveOwner)}` : '';
+    this.renderMainOnly();
+  }
+
+  private clearDocumentFiles(): void {
+    state.docFiles = [];
+    state.docFileNames = [];
+    state.driveStatus = '';
     this.renderMainOnly();
   }
 
   private async selectDocumentOwner(owner: DriveOwner): Promise<void> {
     state.driveOwner = owner;
     state.docFiles = [];
+    state.docFileNames = [];
     state.driveDocs = loadCachedDriveDocs(owner);
     state.driveStatus = state.driveDocs.length
       ? `showing saved ${driveOwnerLabel(owner)} document list`
@@ -570,10 +599,13 @@ export class DashboardApp {
     try {
       const total = state.docFiles.length;
       for (let i = 0; i < total; i += 1) {
-        state.driveStatus = `uploading ${i + 1}/${total} to ${driveOwnerLabel(state.driveOwner)}: ${state.docFiles[i].name}`;
-        await uploadDriveDoc(state.docFiles[i], state.driveOwner);
+        const uploadName = normalizedDocName(state.docFileNames[i], state.docFiles[i].name);
+        state.driveStatus = `uploading ${i + 1}/${total} to ${driveOwnerLabel(state.driveOwner)}: ${uploadName}`;
+        this.renderMainOnly();
+        await uploadDriveDoc(state.docFiles[i], state.driveOwner, uploadName);
       }
       state.docFiles = [];
+      state.docFileNames = [];
       state.driveDocs = await listDriveDocs(state.driveOwner);
       state.driveConnected = true;
       state.driveStatus = `uploaded to ${driveOwnerLabel(state.driveOwner)} Drive folder ✓`;
@@ -1026,8 +1058,14 @@ function storeLabel(store?: Transaction['store']): string {
 
 function driveOwnerLabel(owner: DriveOwner): string {
   if (owner === 'me_work') return 'Mit work';
+  if (owner === 'parents') return 'Parents';
   if (owner === 'her') return 'Shrushti';
   return 'Mit personal';
+}
+
+function normalizedDocName(value: string | undefined, fallback: string): string {
+  const trimmed = value?.trim();
+  return trimmed || fallback;
 }
 
 function formatPdfDate(date: string): string {

@@ -93,6 +93,6 @@ export interface DriveDoc {
   createdTime?: string;
 }
 
-export type DriveOwner = 'me_personal' | 'me_work' | 'her';
+export type DriveOwner = 'me_personal' | 'me_work' | 'parents' | 'her';
 
 export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'documents' | 'settings';

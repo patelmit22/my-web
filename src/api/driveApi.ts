@@ -93,10 +93,10 @@ export async function listDriveDocs(owner: DriveOwner): Promise<DriveDoc[]> {
   return docs;
 }
 
-export async function uploadDriveDoc(file: File, owner: DriveOwner): Promise<DriveDoc> {
+export async function uploadDriveDoc(file: File, owner: DriveOwner, customName?: string): Promise<DriveDoc> {
   const parentId = await requireDrive(owner);
   const metadata = {
-    name: file.name,
+    name: customName?.trim() || file.name,
     mimeType: file.type || 'application/octet-stream',
     parents: [parentId]
   };
@@ -157,6 +157,7 @@ async function ensureFolder(name = FOLDER_NAME, parentId?: string): Promise<stri
 
 function ownerLabel(owner: DriveOwner): string {
   if (owner === 'me_work') return 'Mit work documents';
+  if (owner === 'parents') return 'Parents documents';
   if (owner === 'her') return 'Shrushti documents';
   return 'Mit personal documents';
 }

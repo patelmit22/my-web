@@ -23,6 +23,7 @@ export interface AppState {
   driveBusy: boolean;
   driveStatus: string;
   docFiles: File[];
+  docFileNames: string[];
   lightboxUrls: string[];
   lightboxIndex: number;
   herConfig: HerConfig | null;
@@ -54,6 +55,7 @@ export const state: AppState = {
   driveBusy: false,
   driveStatus: '',
   docFiles: [],
+  docFileNames: [],
   lightboxUrls: [],
   lightboxIndex: 0,
   herConfig: null,

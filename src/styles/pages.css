@@ -138,6 +138,71 @@
 .home-status span{display:block;font-family:var(--font-mono);font-size:0.65rem;color:var(--ink-mute);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.38rem}
 .home-status strong{display:block;font-family:var(--font-ui);font-size:0.95rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .home-status strong.danger{color:#fca5a5}
+.home-focus-strip{
+  display:grid;
+  grid-template-columns:minmax(240px,1.3fr) minmax(260px,1fr) auto;
+  align-items:center;
+  gap:0.85rem;
+  margin:0 0 1.2rem;
+  padding:0.95rem;
+  border:1px solid rgba(124,92,255,0.24);
+  border-radius:18px;
+  background:
+    radial-gradient(circle at 14% 30%,rgba(124,92,255,0.22),transparent 36%),
+    radial-gradient(circle at 86% 70%,rgba(34,211,238,0.13),transparent 34%),
+    linear-gradient(135deg,rgba(255,255,255,0.055),rgba(255,255,255,0.018));
+  box-shadow:0 18px 55px rgba(0,0,0,0.2);
+}
+.home-focus-card{min-width:0}
+.home-focus-card span,
+.home-mini-stats span{
+  display:block;
+  font-family:var(--font-mono);
+  color:var(--ink-mute);
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  font-size:0.64rem;
+}
+.home-focus-card strong{
+  display:block;
+  color:var(--ink);
+  font-family:var(--font-ui);
+  font-size:1.25rem;
+  line-height:1.15;
+  margin:0.18rem 0;
+}
+.home-focus-card small{display:block;color:var(--ink-dim);font-size:0.85rem;line-height:1.45}
+.home-focus-actions{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0.45rem;
+}
+.home-focus-actions button{
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:999px;
+  background:rgba(255,255,255,0.055);
+  color:var(--ink);
+  padding:0.62rem 0.8rem;
+  font-family:var(--font-ui);
+  font-weight:800;
+  cursor:pointer;
+  transition:transform 0.2s,border-color 0.2s,background 0.2s;
+}
+.home-focus-actions button:hover{transform:translateY(-2px);border-color:rgba(124,92,255,0.45);background:rgba(124,92,255,0.16)}
+.home-mini-stats{
+  display:flex;
+  gap:0.4rem;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.home-mini-stats span{
+  color:#bfdbfe;
+  border:1px solid rgba(147,197,253,0.18);
+  border-radius:999px;
+  padding:0.36rem 0.55rem;
+  background:rgba(59,130,246,0.08);
+  white-space:nowrap;
+}
 
 .tiles{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;
@@ -642,6 +707,7 @@
 
   .tiles,
   .home-status-grid,
+  .home-focus-strip,
   .kpi-row,
   .finance-kpi-row,
   .finance-grid,
@@ -822,6 +888,13 @@
   .media-grid.two,
   .media-grid.many{
     grid-template-columns:1fr 1fr;
+  }
+
+  .home-focus-actions{
+    grid-template-columns:1fr;
+  }
+  .home-mini-stats{
+    justify-content:flex-start;
   }
 
   .game-now{

@@ -3,6 +3,16 @@ import type { AtlasMedia, GameStatus } from '../types/models';
 import { esc } from '../utils/sanitize';
 
 const filters: Array<'all' | GameStatus> = ['all', 'playing', 'finished', 'wishlist', 'dropped'];
+const platforms = ['PS5', 'PC', 'Xbox', 'Nintendo Switch', 'Mobile', 'Other'];
+
+function platformOptions(selected = ''): string {
+  const current = selected === 'Switch' ? 'Nintendo Switch' : selected;
+  return platforms.map(platform => `<option value="${esc(platform)}" ${current === platform ? 'selected' : ''}>${esc(platform)}</option>`).join('');
+}
+
+function statusOptions(selected: GameStatus = 'playing'): string {
+  return filters.filter(filter => filter !== 'all').map(status => `<option value="${status}" ${selected === status ? 'selected' : ''}>${status}</option>`).join('');
+}
 
 export function renderGamesPage(state: AppState): string {
   const now = state.games.find(game => game.now);
@@ -28,7 +38,7 @@ export function renderGameModal(state: AppState): string {
       <div class="modal-title">add a game</div>
       <div class="modal-sub">save the game, what it means to you, links, photos, and small videos. Photos are compressed before saving.</div>
       <div class="field"><label class="field-label">title</label><input class="field-input" id="m-gname"></div>
-      <div class="field-row"><div class="field"><label class="field-label">platform</label><select class="field-sel" id="m-gplat"><option>PS5</option><option>PC</option><option>Switch</option><option>Xbox</option><option>Mobile</option><option>Other</option></select></div><div class="field"><label class="field-label">status</label><select class="field-sel" id="m-gstatus"><option value="playing">playing</option><option value="finished">finished</option><option value="wishlist">wishlist</option><option value="dropped">dropped</option></select></div></div>
+      <div class="field-row"><div class="field"><label class="field-label">platform</label><select class="field-sel" id="m-gplat">${platformOptions('PS5')}</select></div><div class="field"><label class="field-label">status</label><select class="field-sel" id="m-gstatus">${statusOptions('playing')}</select></div></div>
       <div class="field"><label class="field-label">cover image URL (optional)</label><input class="field-input" id="m-gcover" placeholder="https://..."></div>
       <div class="field">
         <label class="field-label">or upload cover / icon</label>
@@ -73,6 +83,11 @@ export function renderGameDetailModal(state: AppState): string {
       ${renderClipLinks(game.clips || [])}
       ${renderGameMedia(game.media || [])}
       <div class="game-detail-edit">
+        <div class="field-row">
+          <div class="field"><label class="field-label">change platform</label><select class="field-sel" id="m-gd-plat">${platformOptions(game.platform || 'PS5')}</select></div>
+          <div class="field"><label class="field-label">change status</label><select class="field-sel" id="m-gd-status">${statusOptions(game.status)}</select></div>
+        </div>
+        <div class="field"><label class="field-label check-label"><input type="checkbox" id="m-gd-now" ${game.now ? 'checked' : ''}> currently playing this game</label></div>
         <div class="field"><label class="field-label">update game URL</label><input class="field-input" id="m-gd-url" value="${esc(game.url || '')}" placeholder="https://..."></div>
         <div class="field"><label class="field-label">cover image URL</label><input class="field-input" id="m-gd-cover" value="${esc(game.cover || '')}" placeholder="https://..."></div>
         <div class="field">

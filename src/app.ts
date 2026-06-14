@@ -66,6 +66,7 @@ export class DashboardApp {
       state.activePage = 'home';
       this.hydrateCachedData();
       this.renderApp();
+      this.replaceHistory('home');
       this.subscribeToData();
     });
   }
@@ -179,6 +180,18 @@ export class DashboardApp {
         document.querySelectorAll('.modal-backdrop.open').forEach(modal => closeModal(modal.id));
         this.lightbox.close();
       }
+    });
+
+    window.addEventListener('popstate', () => {
+      if (!state.currentUser) return;
+      const page = this.pageFromHash() || 'home';
+      this.navigate(page, false);
+    });
+
+    window.addEventListener('hashchange', () => {
+      if (!state.currentUser) return;
+      const page = this.pageFromHash() || 'home';
+      this.navigate(page, false);
     });
 
     document.addEventListener('change', event => {
@@ -413,20 +426,50 @@ export class DashboardApp {
     }
   }
 
-  private navigate(page: PageId): void {
+  private navigate(page: PageId, pushHistory = true): void {
+    const oldPage = state.activePage;
     state.activePage = page;
-    if (page === 'documents') {
-      state.driveDocs = loadCachedDriveDocs(state.driveOwner);
-      state.driveConnected = isDriveConnected() || wasDriveConnected();
-      state.driveStatus = state.driveDocs.length
-        ? `showing saved ${driveOwnerLabel(state.driveOwner)} document list`
-        : wasDriveConnected()
-          ? 'reconnecting to Google Drive...'
-          : 'connect Google Drive to load documents';
-    }
+    if (pushHistory && oldPage !== page) this.pushHistory(page);
+    this.preparePage(page);
     this.renderView();
     if (page === 'documents') void this.maybeAutoLoadDriveDocs();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  private preparePage(page: PageId): void {
+    if (page !== 'documents') return;
+    state.driveDocs = loadCachedDriveDocs(state.driveOwner);
+    state.driveConnected = isDriveConnected() || wasDriveConnected();
+    state.driveStatus = state.driveDocs.length
+      ? `showing saved ${driveOwnerLabel(state.driveOwner)} document list`
+      : wasDriveConnected()
+        ? 'reconnecting to Google Drive...'
+        : 'connect Google Drive to load documents';
+  }
+
+  private pushHistory(page: PageId): void {
+    const hash = page === 'home' ? '' : `#${page}`;
+    history.pushState({ page }, '', `${window.location.pathname}${hash}`);
+  }
+
+  private replaceHistory(page: PageId): void {
+    const pageFromHash = this.pageFromHash();
+    const resolvedPage = pageFromHash || page;
+    state.activePage = resolvedPage;
+    this.preparePage(resolvedPage);
+    if (resolvedPage === 'home') {
+      history.replaceState({ page: 'home' }, '', window.location.pathname);
+    } else {
+      history.replaceState({ page: 'home' }, '', window.location.pathname);
+      history.pushState({ page: resolvedPage }, '', `${window.location.pathname}#${resolvedPage}`);
+    }
+    this.renderView();
+    if (resolvedPage === 'documents') void this.maybeAutoLoadDriveDocs();
+  }
+
+  private pageFromHash(): PageId | null {
+    const page = window.location.hash.replace('#', '') as PageId;
+    return ['home', 'finance', 'work', 'atlas', 'games', 'documents', 'settings'].includes(page) ? page : null;
   }
 
   private subscribeToData(): void {
@@ -1006,6 +1049,9 @@ export class DashboardApp {
       button.textContent = 'saving...';
       const updated: Game = {
         ...game,
+        platform: qs<HTMLSelectElement>('#m-gd-plat').value,
+        status: qs<HTMLSelectElement>('#m-gd-status').value as GameStatus,
+        now: checked(document, '#m-gd-now'),
         url: formValue(document, '#m-gd-url'),
         cover: coverMedia[0]?.data || formValue(document, '#m-gd-cover'),
         clips: this.parseLines(formValue(document, '#m-gd-clips')),

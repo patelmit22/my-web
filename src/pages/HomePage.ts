@@ -30,6 +30,22 @@ export function renderHomePage(state: AppState): string {
   const playing = state.games.filter(game => game.status === 'playing').length;
   const latestStory = state.entries[0]?.title || 'no story yet';
   const currentGame = state.games.find(game => game.now)?.name || state.games.find(game => game.status === 'playing')?.name || 'pick a game';
+  const storyCount = state.entries.length;
+  const driveCount = state.driveDocs.length;
+  const vibe = monthIn > 0
+    ? 'money day'
+    : openTasks > 0
+      ? 'mission mode'
+      : playing > 0
+        ? 'game night'
+        : 'quiet dashboard';
+  const vibeLine = monthIn > 0
+    ? `${currency(monthIn)} personal income logged this month`
+    : openTasks > 0
+      ? `${openTasks} work ${openTasks === 1 ? 'task' : 'tasks'} waiting`
+      : playing > 0
+        ? `${playing} game${playing === 1 ? '' : 's'} in progress`
+        : 'write a story, add a game, or save a document';
 
   return `<section class="page active" id="page-home">
     <div class="hero home-hero">
@@ -50,6 +66,23 @@ export function renderHomePage(state: AppState): string {
       <div class="home-status"><span>personal spent</span><strong class="danger">${currency(monthOut)}</strong></div>
       <div class="home-status"><span>latest story</span><strong>${latestStory}</strong></div>
       <div class="home-status"><span>now playing</span><strong>${currentGame}</strong></div>
+    </div>
+    <div class="home-focus-strip">
+      <div class="home-focus-card">
+        <span>today's pulse</span>
+        <strong>${vibe}</strong>
+        <small>${vibeLine}</small>
+      </div>
+      <div class="home-focus-actions">
+        <button data-action="nav" data-page="atlas">write story</button>
+        <button data-action="nav" data-page="work">open work</button>
+        <button data-action="nav" data-page="games">game shelf</button>
+      </div>
+      <div class="home-mini-stats">
+        <span>${storyCount} stories</span>
+        <span>${driveCount} docs</span>
+        <span>${doneTasks} done</span>
+      </div>
     </div>
     <div class="tiles">
       <button class="tile tile-finance" data-action="nav" data-page="finance">

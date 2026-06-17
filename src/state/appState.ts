@@ -8,6 +8,8 @@ export interface AppState {
   atlasSearch: string;
   entryFilter: 'all' | 'me' | 'her';
   txnKind: FinanceKind;
+  financeView: 'personal' | 'subway';
+  financeExpandedPanels: Record<string, boolean>;
   gameFilter: 'all' | Game['status'];
   selectedMood: string;
   txnType: Transaction['type'];
@@ -16,6 +18,7 @@ export interface AppState {
   gameCoverPicks: MediaPick[];
   workMediaPicks: MediaPick[];
   selectedGameId: string | null;
+  gameDetailEditing: boolean;
   selectedTaskId: string | null;
   driveOwner: DriveOwner;
   driveDocs: DriveDoc[];
@@ -40,6 +43,8 @@ export const state: AppState = {
   atlasSearch: '',
   entryFilter: 'all',
   txnKind: 'option',
+  financeView: 'personal',
+  financeExpandedPanels: {},
   gameFilter: 'all',
   selectedMood: '',
   txnType: 'in',
@@ -48,6 +53,7 @@ export const state: AppState = {
   gameCoverPicks: [],
   workMediaPicks: [],
   selectedGameId: null,
+  gameDetailEditing: false,
   selectedTaskId: null,
   driveOwner: 'me_personal',
   driveDocs: [],

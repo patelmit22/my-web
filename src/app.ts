@@ -254,6 +254,16 @@ export class DashboardApp {
         this.renderModalsOnly();
         openModal('modal-txn');
         break;
+      case 'finance-view':
+        state.financeView = target.dataset.view === 'subway' ? 'subway' : 'personal';
+        this.renderMainOnly();
+        break;
+      case 'toggle-finance-panel': {
+        const panel = target.dataset.panel || '';
+        state.financeExpandedPanels[panel] = !state.financeExpandedPanels[panel];
+        this.renderMainOnly();
+        break;
+      }
       case 'select-txn-kind':
         state.txnKind = target.dataset.kind as FinanceKind;
         state.txnType = this.txnTypeForKind(state.txnKind);
@@ -387,6 +397,12 @@ export class DashboardApp {
         state.gameMediaPicks = [];
         state.gameCoverPicks = [];
         state.selectedGameId = target.dataset.id || null;
+        state.gameDetailEditing = false;
+        this.renderModalsOnly();
+        openModal('modal-game-detail');
+        break;
+      case 'edit-game-detail':
+        state.gameDetailEditing = true;
         this.renderModalsOnly();
         openModal('modal-game-detail');
         break;
@@ -1064,6 +1080,7 @@ export class DashboardApp {
       state.gameMediaPicks = [];
       state.gameCoverPicks = [];
       state.selectedGameId = updated.id;
+      state.gameDetailEditing = false;
       closeModal('modal-game-detail');
       this.renderMainOnly();
       this.toast.show('game updated ✓', 'ok');

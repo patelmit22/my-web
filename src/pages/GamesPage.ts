@@ -82,7 +82,8 @@ export function renderGameDetailModal(state: AppState): string {
       ${game.story ? `<div class="game-detail-story">${esc(game.story)}</div>` : '<div class="game-detail-empty">no story added yet.</div>'}
       ${renderClipLinks(game.clips || [])}
       ${renderGameMedia(game.media || [])}
-      <div class="game-detail-edit">
+      ${state.gameDetailEditing ? `<div class="game-detail-edit">
+        <div class="game-edit-heading"><div><strong>Edit game</strong><span>Change the status, story, links, cover, or media.</span></div></div>
         <div class="field-row">
           <div class="field"><label class="field-label">change platform</label><select class="field-sel" id="m-gd-plat">${platformOptions(game.platform || 'PS5')}</select></div>
           <div class="field"><label class="field-label">change status</label><select class="field-sel" id="m-gd-status">${statusOptions(game.status)}</select></div>
@@ -106,8 +107,13 @@ export function renderGameDetailModal(state: AppState): string {
           <div class="media-help">new images compress automatically. videos must stay under 8 MB.</div>
           <div class="mprev" id="m-gd-prev">${renderGameMediaPreviews(state)}</div>
         </div>
+      </div>` : ''}
+      <div class="detail-actions">
+        <button class="btn-ghost" data-action="close-modal" data-modal="modal-game-detail">close</button>
+        ${state.gameDetailEditing
+          ? '<button class="btn-primary" id="m-gd-save" data-action="save-game-detail">save game changes</button>'
+          : '<button class="btn-primary game-edit-button" data-action="edit-game-detail">edit game</button>'}
       </div>
-      <div class="detail-actions"><button class="btn-ghost" data-action="close-modal" data-modal="modal-game-detail">close</button><button class="btn-primary" id="m-gd-save" data-action="save-game-detail">save game changes</button></div>
     </div>
   </div>`;
 }
@@ -130,7 +136,7 @@ export function renderGameCoverPreview(state: AppState): string {
 
 function renderClipLinks(clips: string[]): string {
   if (!clips.length) return '';
-  return `<div class="clip-links">${clips.map((clip, index) => `<a href="${esc(clip)}" target="_blank" rel="noopener">watch PS5 clip ${index + 1} ↗</a>`).join('')}</div>`;
+  return `<div class="game-memory-section"><div class="game-memory-label">saved clips</div><div class="clip-links">${clips.map((clip, index) => `<a href="${esc(clip)}" target="_blank" rel="noopener">watch clip ${index + 1} ↗</a>`).join('')}</div></div>`;
 }
 
 function renderGameCover(cover = '', c1 = '#4338ca', c2 = '#7c3aed', className: 'game-cover' | 'game-detail-cover'): string {
@@ -142,7 +148,7 @@ function renderGameCover(cover = '', c1 = '#4338ca', c2 = '#7c3aed', className: 
 
 function renderGameMedia(media: AtlasMedia[]): string {
   if (!media.length) return '';
-  return `<div class="game-detail-media">${media.map(item => `<div class="game-media-item">
+  return `<div class="game-memory-section"><div class="game-memory-label">photos & videos</div><div class="game-detail-media">${media.map(item => `<div class="game-media-item">
     ${item.type === 'video' ? `<video src="${item.data}" controls playsinline></video>` : `<img src="${item.data}" alt="${esc(item.name || 'game photo')}">`}
-  </div>`).join('')}</div>`;
+  </div>`).join('')}</div></div>`;
 }

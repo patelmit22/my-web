@@ -38,13 +38,27 @@ export function renderFinancePage(state: AppState): string {
   const subwayExpenseMo = sum(monthTxns, txn => kindOf(txn) === 'subway_expense');
   const personalBalance = personalTxns.reduce((total, txn) => total + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
   const subwayBalance = subwayTxns.reduce((total, txn) => total + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
+  const personalOptionTxns = state.txns.filter(txn => kindOf(txn) === 'option');
+  const personalSpendingTxns = state.txns.filter(txn => kindOf(txn) === 'spending' || (kindOf(txn) === 'general' && txn.type === 'out'));
+  const subwayCashTxns = state.txns.filter(txn => kindOf(txn) === 'subway_cash');
+  const subwayExpenseTxns = state.txns.filter(txn => kindOf(txn) === 'subway_expense');
+  const isPersonal = state.financeView === 'personal';
 
   return `<section class="page active" id="page-finance">
-    <div class="page-header"><div><div class="page-title">Finance</div><div class="page-sub">personal money and Subway manager cash stay separate.</div></div></div>
-    <div class="finance-section-block">
+    <div class="page-header"><div><div class="page-title">Finance</div><div class="page-sub">two separate dashboards, one clean money history.</div></div></div>
+    <div class="finance-view-tabs" role="tablist" aria-label="Finance dashboard">
+      <button class="finance-view-tab ${isPersonal ? 'active' : ''}" data-action="finance-view" data-view="personal" role="tab" aria-selected="${isPersonal}">
+        <span class="finance-view-icon personal">$</span><span><strong>My finance</strong><small>options and spending</small></span>
+      </button>
+      <button class="finance-view-tab ${!isPersonal ? 'active subway' : ''}" data-action="finance-view" data-view="subway" role="tab" aria-selected="${!isPersonal}">
+        <span class="finance-view-icon subway">S</span><span><strong>Subway</strong><small>store cash and expenses</small></span>
+      </button>
+    </div>
+    ${isPersonal ? `<div class="finance-section-block finance-dashboard personal-dashboard">
       <div class="finance-section-head">
         <div>
-          <div class="section-title">Personal finance</div>
+          <div class="finance-eyebrow">personal dashboard</div>
+          <div class="section-title">My finance</div>
           <div class="finance-section-sub">Covered calls, puts, and your regular personal spending.</div>
         </div>
         <div class="finance-section-actions">
@@ -52,19 +66,20 @@ export function renderFinancePage(state: AppState): string {
           <button class="finance-action compact" data-action="open-txn-modal" data-kind="spending">+ spending</button>
         </div>
       </div>
+      ${renderTrendCard('Personal cash flow', personalBalance, personalOptionTxns, personalSpendingTxns, 'premium earned', 'money spent')}
       <div class="kpi-row finance-kpi-row">
         <div class="kpi"><div class="kpi-label">personal balance</div><div class="kpi-value ${personalBalance >= 0 ? 'pos' : 'neg'}">${currency(personalBalance)}</div><div class="kpi-change">all time</div></div>
         <div class="kpi"><div class="kpi-label">options premium</div><div class="kpi-value pos">${currency(optionMo)}</div><div class="kpi-change">covered calls + puts this month</div></div>
         <div class="kpi"><div class="kpi-label">personal spent</div><div class="kpi-value neg">${currency(spendingMo)}</div><div class="kpi-change">this month</div></div>
       </div>
       <div class="finance-grid">
-        ${renderPanel('Options: covered calls & puts', state.txns.filter(txn => kindOf(txn) === 'option'), 'option')}
-        ${renderPanel('Spending', state.txns.filter(txn => kindOf(txn) === 'spending' || (kindOf(txn) === 'general' && txn.type === 'out')), 'spending')}
+        ${renderPanel(state, 'Options: covered calls & puts', personalOptionTxns, 'option', 'personal-options')}
+        ${renderPanel(state, 'Spending', personalSpendingTxns, 'spending', 'personal-spending')}
       </div>
-    </div>
-    <div class="finance-section-block subway-section">
+    </div>` : `<div class="finance-section-block finance-dashboard subway-section">
       <div class="finance-section-head">
         <div>
+          <div class="finance-eyebrow subway">manager dashboard</div>
           <div class="section-title">Subway manager cash</div>
           <div class="finance-section-sub">Cash collected and expenses for Walmart, Maple Grove, and Brooklyn Park stores.</div>
         </div>
@@ -73,26 +88,70 @@ export function renderFinancePage(state: AppState): string {
           <button class="finance-action compact" data-action="open-txn-modal" data-kind="subway_expense">+ Subway expense</button>
         </div>
       </div>
+      ${renderTrendCard('Subway cash flow', subwayBalance, subwayCashTxns, subwayExpenseTxns, 'cash collected', 'store expenses', true)}
       <div class="kpi-row finance-kpi-row subway-kpi-row">
         <div class="kpi"><div class="kpi-label">Subway net</div><div class="kpi-value ${subwayBalance >= 0 ? 'pos' : 'neg'}">${currency(subwayBalance)}</div><div class="kpi-change">cash minus expenses, all time</div></div>
         <div class="kpi"><div class="kpi-label">Subway cash</div><div class="kpi-value pos">${currency(subwayCashMo)}</div><div class="kpi-change">collected this month</div></div>
         <div class="kpi"><div class="kpi-label">Subway expenses</div><div class="kpi-value neg">${currency(subwayExpenseMo)}</div><div class="kpi-change">this month</div></div>
       </div>
       <div class="finance-grid subway-grid">
-        ${renderPanel('Cash collected', state.txns.filter(txn => kindOf(txn) === 'subway_cash'), 'subway_cash')}
-        ${renderPanel('Store expenses', state.txns.filter(txn => kindOf(txn) === 'subway_expense'), 'subway_expense')}
+        ${renderPanel(state, 'Cash collected', subwayCashTxns, 'subway_cash', 'subway-cash')}
+        ${renderPanel(state, 'Store expenses', subwayExpenseTxns, 'subway_expense', 'subway-expenses')}
       </div>
-    </div>
+    </div>`}
   </section>`;
 }
 
-function renderPanel(title: string, txns: Transaction[], kind: FinanceKind): string {
-  const rows = txns.length
-    ? txns.slice(0, 12).map(renderTxnRow).join('')
+function renderTrendCard(title: string, balance: number, income: Transaction[], spending: Transaction[], incomeLabel: string, spendingLabel: string, subway = false): string {
+  const months = recentMonths(income, spending);
+  const max = Math.max(1, ...months.flatMap(month => [month.income, month.spending]));
+  return `<div class="finance-trend-card ${subway ? 'subway' : ''}">
+    <div class="finance-trend-summary">
+      <div class="finance-eyebrow">${title}</div>
+      <strong class="finance-trend-balance ${balance >= 0 ? 'pos' : 'neg'}">${currency(balance)}</strong>
+      <span>current all-time balance</span>
+      <div class="finance-trend-legend"><i class="income"></i>${incomeLabel}<i class="spending"></i>${spendingLabel}</div>
+    </div>
+    <div class="finance-trend-chart" aria-label="Last four months cash flow">
+      ${months.map(month => `<div class="finance-trend-month">
+        <div class="finance-bars"><i class="income" style="height:${barHeight(month.income, max)}%"></i><i class="spending" style="height:${barHeight(month.spending, max)}%"></i></div>
+        <span>${month.label}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function recentMonths(income: Transaction[], spending: Transaction[]): Array<{ label: string; income: number; spending: number }> {
+  const now = new Date();
+  return Array.from({ length: 4 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (3 - index), 1);
+    const matchesMonth = (txn: Transaction) => {
+      const txnDate = new Date(txn.date);
+      return txnDate.getMonth() === date.getMonth() && txnDate.getFullYear() === date.getFullYear();
+    };
+    return {
+      label: date.toLocaleDateString('en-US', { month: 'short' }),
+      income: sum(income, matchesMonth),
+      spending: sum(spending, matchesMonth)
+    };
+  });
+}
+
+function barHeight(value: number, max: number): number {
+  return value > 0 ? Math.max(8, Math.round((value / max) * 100)) : 3;
+}
+
+function renderPanel(state: AppState, title: string, txns: Transaction[], kind: FinanceKind, panelKey: string): string {
+  const expanded = Boolean(state.financeExpandedPanels[panelKey]);
+  const ordered = [...txns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const visible = expanded ? ordered : ordered.slice(0, 5);
+  const rows = visible.length
+    ? visible.map(renderTxnRow).join('')
     : `<div class="empty-inline">no entries yet</div>`;
   return `<div class="finance-panel">
     <div class="finance-panel-head"><div class="section-title">${title}</div><button class="btn-ghost small" data-action="open-txn-modal" data-kind="${kind}">+ add</button></div>
     <div class="txn-list">${rows}</div>
+    ${ordered.length > 5 ? `<button class="finance-show-all" data-action="toggle-finance-panel" data-panel="${panelKey}">${expanded ? 'show recent 5' : `show all ${ordered.length}`}</button>` : ''}
   </div>`;
 }
 

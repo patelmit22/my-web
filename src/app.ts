@@ -650,13 +650,18 @@ export class DashboardApp {
         files
       };
       if (navigator.canShare?.(shareData)) {
-        await navigator.share(shareData);
-        state.funStatus = 'shared to Files/iCloud flow ✓';
-        this.toast.show('choose Save to Files to put it in iCloud', 'ok');
+        try {
+          await navigator.share(shareData);
+          state.funStatus = 'shared to Files/iCloud flow ✓';
+          this.toast.show('choose Save to Files to put it in iCloud', 'ok');
+        } catch (error) {
+          console.warn('Share sheet blocked, falling back to downloads', error);
+          downloadFiles(files);
+          state.funStatus = 'Chrome blocked the save sheet, so download started instead. Move it into iCloud Drive.';
+          this.toast.show('download started instead ✓', 'ok');
+        }
       } else {
-        files.forEach((file, index) => {
-          window.setTimeout(() => downloadFile(file), index * 250);
-        });
+        downloadFiles(files);
         state.funStatus = 'download started. Move the downloads into iCloud Drive if your browser asks.';
         this.toast.show('downloads started ✓', 'ok');
       }
@@ -1295,4 +1300,10 @@ function downloadFile(file: File): void {
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function downloadFiles(files: File[]): void {
+  files.forEach((file, index) => {
+    window.setTimeout(() => downloadFile(file), index * 250);
+  });
 }

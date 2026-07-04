@@ -50,6 +50,43 @@ export function compressImage(file: File): Promise<string> {
   });
 }
 
+export function compressImageFile(file: File, name: string): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const max = 1600;
+      let { width, height } = img;
+      if (width > max || height > max) {
+        if (width > height) {
+          height = Math.round((height * max) / width);
+          width = max;
+        } else {
+          width = Math.round((width * max) / height);
+          height = max;
+        }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => {
+        if (!blob) {
+          reject(new Error(`Could not compress ${file.name}`));
+          return;
+        }
+        resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() }));
+      }, 'image/jpeg', 0.78);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`Could not read ${file.name}`));
+    };
+    img.src = url;
+  });
+}
+
 export function videoToData(file: File): Promise<string> {
   if (file.size > MAX_VIDEO_BYTES) {
     const mb = Math.round((file.size / 1024 / 1024) * 10) / 10;

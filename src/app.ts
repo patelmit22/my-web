@@ -23,9 +23,9 @@ import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
 import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
 import { state } from './state/appState';
-import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
+import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
-import { fileToPick, releasePicks, serializeMedia } from './utils/media';
+import { compressImageFile, fileToPick, releasePicks, serializeMedia } from './utils/media';
 import {
   filteredEntries,
   renderAtlasPage,
@@ -33,6 +33,8 @@ import {
   renderFinancePage,
   renderGameCoverPreview,
   renderDocumentsPage,
+  renderFunPage,
+  renderFunPreviews,
   renderGameMediaPreviews,
   renderGamesPage,
   renderHomePage,
@@ -135,6 +137,7 @@ export class DashboardApp {
       case 'atlas': return renderAtlasPage(state);
       case 'games': return renderGamesPage(state);
       case 'documents': return renderDocumentsPage(state);
+      case 'fun': return renderFunPage(state);
       case 'settings': return renderSettingsPage(state);
       case 'home':
       default: return renderHomePage(state);
@@ -204,6 +207,7 @@ export class DashboardApp {
       if (target.id === 'm-kfiles') this.handleWorkMediaFiles(target.files);
       if (target.id === 'm-kd-files') this.handleWorkMediaFiles(target.files, 'm-kd-prev', 'm-kd-files');
       if (target.id === 'doc-files') this.handleDocumentFiles(target.files);
+      if (target.id === 'fun-files') this.handleFunFiles(target.files);
     });
   }
 
@@ -302,6 +306,18 @@ export class DashboardApp {
         break;
       case 'delete-drive-doc':
         if (confirm('delete this document from Google Drive?')) await this.deleteDocument(target.dataset.id || '');
+        break;
+      case 'select-fun-owner':
+        this.selectFunOwner((target.dataset.owner as FunOwner) || 'me');
+        break;
+      case 'choose-fun-media':
+        qs<HTMLInputElement>('#fun-files').click();
+        break;
+      case 'remove-fun-media':
+        this.removeFunMedia(Number(target.dataset.index || 0));
+        break;
+      case 'save-fun-icloud':
+        await this.saveFunToCloudFiles();
         break;
       case 'close-modal':
         closeModal(target.dataset.modal || '');
@@ -485,7 +501,7 @@ export class DashboardApp {
 
   private pageFromHash(): PageId | null {
     const page = window.location.hash.replace('#', '') as PageId;
-    return ['home', 'finance', 'work', 'atlas', 'games', 'documents', 'settings'].includes(page) ? page : null;
+    return ['home', 'finance', 'work', 'atlas', 'games', 'documents', 'fun', 'settings'].includes(page) ? page : null;
   }
 
   private subscribeToData(): void {
@@ -565,6 +581,96 @@ export class DashboardApp {
     state.docFileNames = [];
     state.driveStatus = '';
     this.renderMainOnly();
+  }
+
+  private selectFunOwner(owner: FunOwner): void {
+    state.funOwner = owner;
+    state.funStatus = owner === 'her' ? 'Shrushti fun selected' : 'Mit fun selected';
+    this.renderMainOnly();
+  }
+
+  private handleFunFiles(files: FileList | null): void {
+    if (!files) return;
+    Array.from(files)
+      .filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'))
+      .slice(0, 30 - state.funMediaPicks.length)
+      .forEach(file => state.funMediaPicks.push(fileToPick(file)));
+    state.funStatus = `${state.funMediaPicks.length} file${state.funMediaPicks.length === 1 ? '' : 's'} ready`;
+    const previews = document.getElementById('fun-previews');
+    if (previews) previews.innerHTML = renderFunPreviews(state);
+    const input = document.querySelector<HTMLInputElement>('#fun-files');
+    if (input) input.value = '';
+    const save = document.querySelector<HTMLButtonElement>('.fun-save');
+    if (save) {
+      save.disabled = !state.funMediaPicks.length;
+      save.textContent = `save ${state.funMediaPicks.length} to iCloud / Files`;
+    }
+  }
+
+  private removeFunMedia(index: number): void {
+    URL.revokeObjectURL(state.funMediaPicks[index]?.prev);
+    state.funMediaPicks.splice(index, 1);
+    state.funStatus = state.funMediaPicks.length ? `${state.funMediaPicks.length} file${state.funMediaPicks.length === 1 ? '' : 's'} ready` : '';
+    const previews = document.getElementById('fun-previews');
+    if (previews) previews.innerHTML = renderFunPreviews(state);
+    const save = document.querySelector<HTMLButtonElement>('.fun-save');
+    if (save) {
+      save.disabled = !state.funMediaPicks.length;
+      save.textContent = state.funMediaPicks.length ? `save ${state.funMediaPicks.length} to iCloud / Files` : 'save to iCloud / Files';
+    }
+  }
+
+  private async saveFunToCloudFiles(): Promise<void> {
+    if (!state.funMediaPicks.length) return this.toast.show('choose photos or videos first', 'err');
+    const button = qs<HTMLButtonElement>('.fun-save');
+    button.disabled = true;
+    try {
+      const title = optionalFormValue('#fun-title') || `${state.funOwner === 'her' ? 'shrushti' : 'mit'} fun`;
+      const files: File[] = [];
+      for (let i = 0; i < state.funMediaPicks.length; i += 1) {
+        const pick = state.funMediaPicks[i];
+        button.textContent = pick.type === 'image' ? `compressing ${i + 1}/${state.funMediaPicks.length}...` : `preparing ${i + 1}/${state.funMediaPicks.length}...`;
+        const safeBase = safeFileBase(`${title}-${i + 1}`);
+        if (pick.type === 'image') {
+          try {
+            files.push(await compressImageFile(pick.file, `${safeBase}.jpg`));
+          } catch {
+            files.push(new File([pick.file], `${safeBase}-${pick.name}`, { type: pick.file.type, lastModified: Date.now() }));
+          }
+        } else {
+          const ext = pick.name.includes('.') ? pick.name.split('.').pop() : 'mov';
+          files.push(new File([pick.file], `${safeBase}.${ext}`, { type: pick.file.type || 'video/quicktime', lastModified: Date.now() }));
+        }
+      }
+
+      button.textContent = 'opening save sheet...';
+      const shareData: ShareData = {
+        title,
+        text: `Save ${title} to iCloud Drive / Files`,
+        files
+      };
+      if (navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+        state.funStatus = 'shared to Files/iCloud flow ✓';
+        this.toast.show('choose Save to Files to put it in iCloud', 'ok');
+      } else {
+        files.forEach((file, index) => {
+          window.setTimeout(() => downloadFile(file), index * 250);
+        });
+        state.funStatus = 'download started. Move the downloads into iCloud Drive if your browser asks.';
+        this.toast.show('downloads started ✓', 'ok');
+      }
+      releasePicks(state.funMediaPicks);
+      state.funMediaPicks = [];
+    } catch (error) {
+      console.error('iCloud handoff failed', error);
+      state.funStatus = error instanceof Error ? error.message : 'iCloud handoff failed';
+      this.toast.show(`could not save: ${state.funStatus}`, 'err');
+    } finally {
+      button.disabled = false;
+      button.textContent = `save ${state.funMediaPicks.length || ''} to iCloud / Files`;
+      this.renderMainOnly();
+    }
   }
 
   private async selectDocumentOwner(owner: DriveOwner): Promise<void> {
@@ -1170,4 +1276,23 @@ function optionalFormValue(selector: string): string {
 
 function parseMoney(value: string): number {
   return Number.parseFloat(value.replace(/[$,\s]/g, ''));
+}
+
+function safeFileBase(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 70) || 'fun-memory';
+}
+
+function downloadFile(file: File): void {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }

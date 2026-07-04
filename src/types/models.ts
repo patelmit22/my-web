@@ -95,4 +95,6 @@ export interface DriveDoc {
 
 export type DriveOwner = 'me_personal' | 'me_work' | 'parents' | 'her';
 
-export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'documents' | 'settings';
+export type FunOwner = 'me' | 'her';
+
+export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'documents' | 'fun' | 'settings';

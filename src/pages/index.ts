@@ -5,4 +5,5 @@ export { renderWorkMediaPreviews, renderWorkPage } from './WorkPage';
 export { filteredEntries, renderAtlasPage, renderEntriesList, renderMediaPreviews } from './AtlasPage';
 export { renderGameCoverPreview, renderGamesPage, renderGameMediaPreviews } from './GamesPage';
 export { renderDocumentsPage } from './DocumentsPage';
+export { renderFunPage, renderFunPreviews } from './FunPage';
 export { renderSettingsPage } from './SettingsPage';

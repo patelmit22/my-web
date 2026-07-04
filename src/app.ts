@@ -50,6 +50,7 @@ export class DashboardApp {
   private readonly lightbox = new Lightbox();
   private readonly unsubs: Array<() => void> = [];
   private readonly reportedDataErrors = new Set<string>();
+  private readonly funViewerUrls: string[] = [];
   private driveAutoLoadKey = '';
 
   constructor(private readonly root: HTMLElement) {}
@@ -182,6 +183,7 @@ export class DashboardApp {
       if (event.key === 'Escape') {
         document.querySelectorAll('.modal-backdrop.open').forEach(modal => closeModal(modal.id));
         this.lightbox.close();
+        this.closeFunViewer();
       }
     });
 
@@ -321,6 +323,12 @@ export class DashboardApp {
         break;
       case 'delete-fun-pack':
         this.deleteFunPack(target.dataset.id || '');
+        break;
+      case 'open-fun-pack':
+        await this.openFunPack(target.dataset.id || '');
+        break;
+      case 'close-fun-viewer':
+        this.closeFunViewer();
         break;
       case 'close-modal':
         closeModal(target.dataset.modal || '');
@@ -625,10 +633,66 @@ export class DashboardApp {
   }
 
   private deleteFunPack(id: string): void {
-    state.funPacks = state.funPacks.filter(pack => pack.id !== id);
+    const pack = state.funPacks.find(item => item.id === id);
+    pack?.files.forEach(file => {
+      if (file.storageKey) void deleteFunBlob(file.storageKey);
+    });
+    state.funPacks = state.funPacks.filter(item => item.id !== id);
     saveFunPacks(state.funPacks);
     state.funStatus = 'saved preview removed';
     this.renderMainOnly();
+  }
+
+  private async openFunPack(id: string): Promise<void> {
+    const pack = state.funPacks.find(item => item.id === id);
+    if (!pack) return;
+    this.closeFunViewer();
+    const mediaHtml: string[] = [];
+    for (const file of pack.files) {
+      let url = '';
+      if (file.storageKey) {
+        const blob = await getFunBlob(file.storageKey);
+        if (blob) {
+          url = URL.createObjectURL(blob);
+          this.funViewerUrls.push(url);
+        }
+      }
+      mediaHtml.push(`<div class="fun-viewer-item">
+        <div class="fun-viewer-media">
+          ${url
+            ? file.type === 'video'
+              ? `<video src="${url}" controls playsinline preload="metadata"></video>`
+              : `<img src="${url}" alt="${escapeAttr(file.name)}">`
+            : file.preview
+              ? `<img src="${file.preview}" alt="${escapeAttr(file.name)}">`
+              : `<div class="fun-viewer-missing">${file.type === 'video' ? '🎥' : '📸'}<span>saved in iCloud / Files</span></div>`}
+        </div>
+        <div class="fun-viewer-name">${escapeHtml(file.name)}</div>
+        ${!url ? '<div class="fun-viewer-note">Full file is in iCloud / Files. New saves from now on can open here too.</div>' : ''}
+      </div>`);
+    }
+    const date = new Date(pack.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const viewer = document.createElement('div');
+    viewer.id = 'fun-viewer';
+    viewer.className = 'modal-backdrop open fun-viewer-backdrop';
+    viewer.innerHTML = `<div class="modal-card fun-viewer-card">
+      <button class="modal-x" data-action="close-fun-viewer">×</button>
+      <div class="fun-viewer-head">
+        <div>
+          <h2>${escapeHtml(pack.title)}</h2>
+          <p>${pack.owner === 'her' ? 'Shrushti fun' : 'Mit fun'} · ${date} · ${pack.files.length} file${pack.files.length === 1 ? '' : 's'}</p>
+        </div>
+      </div>
+      <div class="fun-viewer-grid">${mediaHtml.join('')}</div>
+    </div>`;
+    document.body.appendChild(viewer);
+  }
+
+  private closeFunViewer(): void {
+    document.getElementById('fun-viewer')?.remove();
+    while (this.funViewerUrls.length) {
+      URL.revokeObjectURL(this.funViewerUrls.pop() || '');
+    }
   }
 
   private async saveFunToCloudFiles(): Promise<void> {
@@ -676,7 +740,7 @@ export class DashboardApp {
         state.funStatus = 'download started. Move the downloads into iCloud Drive if your browser asks.';
         this.toast.show('downloads started ✓', 'ok');
       }
-      const pack = await buildFunPack(title, state.funOwner, state.funMediaPicks);
+      const pack = await buildFunPack(title, state.funOwner, state.funMediaPicks, files);
       state.funPacks = [pack, ...state.funPacks].slice(0, 80);
       saveFunPacks(state.funPacks);
       releasePicks(state.funMediaPicks);
@@ -1252,6 +1316,8 @@ function driveOwnerLabel(owner: DriveOwner): string {
 }
 
 const FUN_PACKS_KEY = 'mitpatel_fun_packs_v1';
+const FUN_DB_NAME = 'mitpatel_fun_vault';
+const FUN_DB_STORE = 'media';
 
 function loadFunPacks(): FunPack[] {
   try {
@@ -1278,10 +1344,10 @@ function saveFunPacks(packs: FunPack[]): void {
   }
 }
 
-async function buildFunPack(title: string, owner: FunOwner, picks: MediaPick[]): Promise<FunPack> {
+async function buildFunPack(title: string, owner: FunOwner, picks: MediaPick[], savedFiles: File[]): Promise<FunPack> {
   const files: FunSavedMedia[] = [];
-  for (const pick of picks) {
-    files.push(await mediaPickToSavedMedia(pick));
+  for (let i = 0; i < picks.length; i += 1) {
+    files.push(await mediaPickToSavedMedia(picks[i], savedFiles[i]));
   }
   return {
     id: `fun_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -1292,16 +1358,69 @@ async function buildFunPack(title: string, owner: FunOwner, picks: MediaPick[]):
   };
 }
 
-async function mediaPickToSavedMedia(pick: MediaPick): Promise<FunSavedMedia> {
-  const base: FunSavedMedia = { type: pick.type, name: pick.name };
+async function mediaPickToSavedMedia(pick: MediaPick, savedFile?: File): Promise<FunSavedMedia> {
+  const mediaFile = savedFile || pick.file;
+  const storageKey = `fun_media_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const base: FunSavedMedia = { type: pick.type, name: mediaFile.name || pick.name, size: mediaFile.size };
+  try {
+    await putFunBlob(storageKey, mediaFile);
+    base.storageKey = storageKey;
+  } catch {
+    // If browser storage refuses the file, still keep the visible history card.
+  }
   try {
     const preview = pick.type === 'image'
-      ? await imageFileToThumb(pick.file)
-      : await videoFileToThumb(pick.file);
+      ? await imageFileToThumb(mediaFile)
+      : await videoFileToThumb(mediaFile);
     return preview ? { ...base, preview } : base;
   } catch {
     return base;
   }
+}
+
+function openFunDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(FUN_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(FUN_DB_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Could not open Fun vault storage'));
+  });
+}
+
+async function putFunBlob(key: string, blob: Blob): Promise<void> {
+  const db = await openFunDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(FUN_DB_STORE, 'readwrite');
+    tx.objectStore(FUN_DB_STORE).put(blob, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Could not save Fun vault media'));
+  });
+  db.close();
+}
+
+async function getFunBlob(key: string): Promise<Blob | null> {
+  const db = await openFunDb();
+  const blob = await new Promise<Blob | null>((resolve, reject) => {
+    const tx = db.transaction(FUN_DB_STORE, 'readonly');
+    const request = tx.objectStore(FUN_DB_STORE).get(key);
+    request.onsuccess = () => resolve((request.result as Blob | undefined) || null);
+    request.onerror = () => reject(request.error || new Error('Could not open Fun vault media'));
+  });
+  db.close();
+  return blob;
+}
+
+async function deleteFunBlob(key: string): Promise<void> {
+  const db = await openFunDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(FUN_DB_STORE, 'readwrite');
+    tx.objectStore(FUN_DB_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Could not delete Fun vault media'));
+  });
+  db.close();
 }
 
 function imageFileToThumb(file: File): Promise<string> {

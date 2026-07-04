@@ -101,6 +101,8 @@ export interface FunSavedMedia {
   type: 'image' | 'video';
   name: string;
   preview?: string;
+  storageKey?: string;
+  size?: number;
 }
 
 export interface FunPack {

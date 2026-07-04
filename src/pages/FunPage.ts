@@ -39,7 +39,7 @@ function renderFunPack(pack: FunPack): string {
   const owner = ownerLabel(pack.owner);
   const visibleFiles = pack.files.slice(0, 4);
 
-  return `<article class="fun-pack-card">
+  return `<article class="fun-pack-card" data-action="open-fun-pack" data-id="${esc(pack.id)}" tabindex="0" role="button" aria-label="open ${esc(pack.title)}">
     <div class="fun-pack-cover ${pack.files.some(file => file.type === 'video') ? 'video' : ''}">
       ${renderPackIcon(pack)}
     </div>

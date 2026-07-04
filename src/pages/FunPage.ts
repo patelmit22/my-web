@@ -1,4 +1,5 @@
 import type { AppState } from '../state/appState';
+import type { FunPack } from '../types/models';
 import { esc } from '../utils/sanitize';
 
 function ownerLabel(owner: AppState['funOwner']): string {
@@ -17,6 +18,53 @@ export function renderFunPreviews(state: AppState): string {
     <div class="fun-preview-name">${esc(pick.name)}</div>
     <button class="fun-remove" data-action="remove-fun-media" data-index="${index}" title="remove">×</button>
   </div>`).join('');
+}
+
+function renderPackIcon(pack: FunPack): string {
+  const first = pack.files.find(file => file.preview);
+  if (first?.preview) {
+    return `<img src="${first.preview}" alt="${esc(pack.title)} preview">`;
+  }
+  const hasVideo = pack.files.some(file => file.type === 'video');
+  const hasImage = pack.files.some(file => file.type === 'image');
+  if (hasVideo && hasImage) return '<span>🎞️</span>';
+  if (hasVideo) return '<span>🎥</span>';
+  if (hasImage) return '<span>📸</span>';
+  return '<span>✨</span>';
+}
+
+function renderFunPack(pack: FunPack): string {
+  const date = new Date(pack.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const mediaLabel = `${pack.files.length} file${pack.files.length === 1 ? '' : 's'}`;
+  const owner = ownerLabel(pack.owner);
+  const visibleFiles = pack.files.slice(0, 4);
+
+  return `<article class="fun-pack-card">
+    <div class="fun-pack-cover ${pack.files.some(file => file.type === 'video') ? 'video' : ''}">
+      ${renderPackIcon(pack)}
+    </div>
+    <div class="fun-pack-body">
+      <div class="fun-pack-title">${esc(pack.title)}</div>
+      <div class="fun-pack-meta">${owner} · ${date} · ${mediaLabel}</div>
+      <div class="fun-pack-files">
+        ${visibleFiles.map(file => `<span class="fun-pack-file">${file.type === 'video' ? '🎥' : '📸'} ${esc(file.name)}</span>`).join('')}
+        ${pack.files.length > visibleFiles.length ? `<span class="fun-pack-file">+${pack.files.length - visibleFiles.length} more</span>` : ''}
+      </div>
+    </div>
+    <button class="fun-pack-delete" data-action="delete-fun-pack" data-id="${esc(pack.id)}" title="remove saved preview">×</button>
+  </article>`;
+}
+
+export function renderFunPacks(state: AppState): string {
+  const packs = state.funPacks
+    .filter(pack => pack.owner === state.funOwner)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  if (!packs.length) {
+    return `<div class="fun-pack-empty">no saved ${ownerLabel(state.funOwner)} packs yet. save one and it will show here.</div>`;
+  }
+
+  return `<div class="fun-pack-grid">${packs.map(renderFunPack).join('')}</div>`;
 }
 
 export function renderFunPage(state: AppState): string {
@@ -65,6 +113,14 @@ export function renderFunPage(state: AppState): string {
         save ${state.funMediaPicks.length || ''} to iCloud / Files
       </button>
       ${state.funStatus ? `<div class="drive-status">${esc(state.funStatus)}</div>` : ''}
+
+      <div class="fun-saved-head">
+        <div>
+          <h3>saved in this vault</h3>
+          <p>small previews stay here so you can remember what you saved. full files stay in iCloud / Files.</p>
+        </div>
+      </div>
+      ${renderFunPacks(state)}
     </div>
   </section>`;
 }

@@ -1,4 +1,4 @@
-import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
 import type { MediaPick } from '../utils/media';
 
 export interface AppState {
@@ -29,6 +29,7 @@ export interface AppState {
   docFileNames: string[];
   funOwner: FunOwner;
   funMediaPicks: MediaPick[];
+  funPacks: FunPack[];
   funStatus: string;
   lightboxUrls: string[];
   lightboxIndex: number;
@@ -67,6 +68,7 @@ export const state: AppState = {
   docFileNames: [],
   funOwner: 'me',
   funMediaPicks: [],
+  funPacks: [],
   funStatus: '',
   lightboxUrls: [],
   lightboxIndex: 0,

@@ -97,4 +97,18 @@ export type DriveOwner = 'me_personal' | 'me_work' | 'parents' | 'her';
 
 export type FunOwner = 'me' | 'her';
 
+export interface FunSavedMedia {
+  type: 'image' | 'video';
+  name: string;
+  preview?: string;
+}
+
+export interface FunPack {
+  id: string;
+  owner: FunOwner;
+  title: string;
+  date: string;
+  files: FunSavedMedia[];
+}
+
 export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'documents' | 'fun' | 'settings';

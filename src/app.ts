@@ -23,9 +23,9 @@ import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
 import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
 import { state } from './state/appState';
-import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
+import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
-import { compressImageFile, fileToPick, releasePicks, serializeMedia } from './utils/media';
+import { compressImageFile, fileToPick, releasePicks, serializeMedia, type MediaPick } from './utils/media';
 import {
   filteredEntries,
   renderAtlasPage,
@@ -319,6 +319,9 @@ export class DashboardApp {
       case 'save-fun-icloud':
         await this.saveFunToCloudFiles();
         break;
+      case 'delete-fun-pack':
+        this.deleteFunPack(target.dataset.id || '');
+        break;
       case 'close-modal':
         closeModal(target.dataset.modal || '');
         break;
@@ -547,6 +550,7 @@ export class DashboardApp {
     state.txns = loadCachedList('txns').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     state.tasks = loadCachedList('tasks');
     state.games = loadCachedList('games');
+    state.funPacks = loadFunPacks();
   }
 
   private showDataError(area: string, error: Error): void {
@@ -620,6 +624,13 @@ export class DashboardApp {
     }
   }
 
+  private deleteFunPack(id: string): void {
+    state.funPacks = state.funPacks.filter(pack => pack.id !== id);
+    saveFunPacks(state.funPacks);
+    state.funStatus = 'saved preview removed';
+    this.renderMainOnly();
+  }
+
   private async saveFunToCloudFiles(): Promise<void> {
     if (!state.funMediaPicks.length) return this.toast.show('choose photos or videos first', 'err');
     const button = qs<HTMLButtonElement>('.fun-save');
@@ -665,6 +676,9 @@ export class DashboardApp {
         state.funStatus = 'download started. Move the downloads into iCloud Drive if your browser asks.';
         this.toast.show('downloads started ✓', 'ok');
       }
+      const pack = await buildFunPack(title, state.funOwner, state.funMediaPicks);
+      state.funPacks = [pack, ...state.funPacks].slice(0, 80);
+      saveFunPacks(state.funPacks);
       releasePicks(state.funMediaPicks);
       state.funMediaPicks = [];
     } catch (error) {
@@ -1235,6 +1249,127 @@ function driveOwnerLabel(owner: DriveOwner): string {
   if (owner === 'parents') return 'Parents';
   if (owner === 'her') return 'Shrushti';
   return 'Mit personal';
+}
+
+const FUN_PACKS_KEY = 'mitpatel_fun_packs_v1';
+
+function loadFunPacks(): FunPack[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(FUN_PACKS_KEY) || '[]') as FunPack[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFunPacks(packs: FunPack[]): void {
+  try {
+    localStorage.setItem(FUN_PACKS_KEY, JSON.stringify(packs));
+  } catch {
+    const lighter = packs.map(pack => ({
+      ...pack,
+      files: pack.files.map(file => ({ type: file.type, name: file.name }))
+    }));
+    try {
+      localStorage.setItem(FUN_PACKS_KEY, JSON.stringify(lighter));
+    } catch {
+      // The real files are already in iCloud/Files. This is only a small local history shelf.
+    }
+  }
+}
+
+async function buildFunPack(title: string, owner: FunOwner, picks: MediaPick[]): Promise<FunPack> {
+  const files: FunSavedMedia[] = [];
+  for (const pick of picks) {
+    files.push(await mediaPickToSavedMedia(pick));
+  }
+  return {
+    id: `fun_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    owner,
+    title,
+    date: new Date().toISOString(),
+    files
+  };
+}
+
+async function mediaPickToSavedMedia(pick: MediaPick): Promise<FunSavedMedia> {
+  const base: FunSavedMedia = { type: pick.type, name: pick.name };
+  try {
+    const preview = pick.type === 'image'
+      ? await imageFileToThumb(pick.file)
+      : await videoFileToThumb(pick.file);
+    return preview ? { ...base, preview } : base;
+  } catch {
+    return base;
+  }
+}
+
+function imageFileToThumb(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const max = 420;
+      let { width, height } = img;
+      if (width > max || height > max) {
+        if (width > height) {
+          height = Math.round((height * max) / width);
+          width = max;
+        } else {
+          width = Math.round((width * max) / height);
+          height = max;
+        }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.58));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`Could not read ${file.name}`));
+    };
+    img.src = url;
+  });
+}
+
+function videoFileToThumb(file: File): Promise<string> {
+  return new Promise(resolve => {
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(file);
+    let settled = false;
+    const finish = (preview = '') => {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(url);
+      resolve(preview);
+    };
+    const draw = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const width = video.videoWidth || 420;
+        const height = video.videoHeight || 260;
+        const max = 420;
+        const scale = Math.min(1, max / Math.max(width, height));
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
+        canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        finish(canvas.toDataURL('image/jpeg', 0.58));
+      } catch {
+        finish();
+      }
+    };
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.addEventListener('loadeddata', draw, { once: true });
+    video.addEventListener('error', () => finish(), { once: true });
+    window.setTimeout(() => finish(), 1800);
+    video.src = url;
+    video.load();
+  });
 }
 
 function normalizedDocName(value: string | undefined, fallback: string): string {

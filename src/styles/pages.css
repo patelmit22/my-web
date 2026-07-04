@@ -392,12 +392,12 @@
   color:var(--ink);text-align:left;
 }
 .task:hover{border-color:rgba(255,255,255,0.18);background:rgba(20,23,41,0.85);transform:translateY(-1px)}
-.task-title{font-size:0.88rem;font-weight:500;line-height:1.4;margin-bottom:0.3rem;padding-right:1rem}
+.task-title{font-size:0.88rem;font-weight:500;line-height:1.4;margin-bottom:0.3rem;padding-right:0}
 .task-note{font-size:0.76rem;color:var(--ink-dim);line-height:1.45;margin:0.35rem 0 0.5rem}
 .task-meta{display:flex;gap:0.6rem;align-items:center;font-family:var(--font-mono);font-size:0.68rem;color:var(--ink-mute)}
-.task-actions{position:relative;display:flex;gap:0.25rem;opacity:1;transition:opacity 0.2s;justify-content:flex-end;margin-bottom:0.45rem;flex-wrap:wrap}
+.task-actions{position:relative;display:flex;gap:0.35rem;opacity:0.72;transition:opacity 0.2s;justify-content:flex-start;margin-top:0.75rem;padding-top:0.65rem;border-top:1px solid rgba(255,255,255,0.065);flex-wrap:wrap}
 .task:hover .task-actions{opacity:1}
-.task-act{background:rgba(255,255,255,0.055);border:1px solid var(--glass-border);color:var(--ink-dim);cursor:pointer;padding:0.22rem 0.45rem;border-radius:7px;font-size:0.72rem}
+.task-act{background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);color:var(--ink-dim);cursor:pointer;padding:0.24rem 0.5rem;border-radius:999px;font-size:0.7rem}
 .task-act:hover{color:var(--ink);background:var(--glass-2)}
 .task-act.done{color:#86efac;border-color:rgba(34,197,94,0.25);background:rgba(34,197,94,0.1)}
 .task-photo-strip{display:flex;gap:0.35rem;margin:0.55rem 0;overflow:hidden}

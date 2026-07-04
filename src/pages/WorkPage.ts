@@ -16,6 +16,10 @@ export function renderWorkPage(state: AppState): string {
       const tasks = state.tasks.filter(task => task.col === column.key);
       return `<div class="col"><div class="col-header"><div class="col-name"><span class="col-dot ${column.key}"></span>${column.name}</div><div class="col-count">${tasks.length}</div></div>
         <div class="cards">${tasks.map(task => `<article class="task" data-action="open-task-detail" data-id="${esc(task.id)}" tabindex="0">
+          <div class="task-title">${esc(task.title)}</div>
+          ${task.note ? `<div class="task-note">${esc(task.note).slice(0, 110)}${task.note.length > 110 ? '...' : ''}</div>` : ''}
+          ${task.media?.length ? `<div class="task-photo-strip">${renderTaskMedia(task.media)}</div>` : ''}
+          <div class="task-meta">${fmtDate(task.date)} · ${esc(task.by || '')}</div>
           <div class="task-actions">
             <button class="task-act" title="edit" data-action="open-task-detail" data-id="${esc(task.id)}">edit</button>
             ${column.key !== 'todo' ? `<button class="task-act" title="move left" data-action="move-task" data-id="${esc(task.id)}" data-dir="-1">←</button>` : ''}
@@ -23,10 +27,6 @@ export function renderWorkPage(state: AppState): string {
             ${column.key !== 'done' ? `<button class="task-act done" title="mark done" data-action="set-task-column" data-id="${esc(task.id)}" data-col="done">done</button>` : ''}
             <button class="task-act" title="delete" data-action="delete-task" data-id="${esc(task.id)}">×</button>
           </div>
-          <div class="task-title">${esc(task.title)}</div>
-          ${task.note ? `<div class="task-note">${esc(task.note).slice(0, 110)}${task.note.length > 110 ? '...' : ''}</div>` : ''}
-          ${task.media?.length ? `<div class="task-photo-strip">${renderTaskMedia(task.media)}</div>` : ''}
-          <div class="task-meta">${fmtDate(task.date)} · ${esc(task.by || '')}</div>
         </article>`).join('')}</div>
         <button class="col-add" data-action="open-task-modal" data-col="${column.key}">+ add</button>
       </div>`;

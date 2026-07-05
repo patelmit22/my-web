@@ -674,6 +674,8 @@ export class DashboardApp {
         }
       } else if (file.data) {
         url = file.data;
+      } else if (file.dataChunks?.length) {
+        url = file.dataChunks.join('');
       } else if (file.url) {
         url = file.url;
       } else if (file.storageKey) {
@@ -745,7 +747,7 @@ export class DashboardApp {
         }
       }
 
-      const uploaded: Array<{ storagePath?: string; data?: string }> = [];
+      const uploaded: Array<{ storagePath?: string; data?: string; dataChunks?: string[] }> = [];
       for (let i = 0; i < files.length; i += 1) {
         const mb = Math.round((files[i].size / 1024 / 1024) * 10) / 10;
         button.textContent = `uploading ${i + 1}/${files.length} · 0% of ${mb} MB`;
@@ -756,7 +758,7 @@ export class DashboardApp {
         } catch (error) {
           console.warn('Firebase Storage upload failed; saving inline fallback', error);
           button.textContent = `saving ${i + 1}/${files.length} privately...`;
-          uploaded.push({ data: await fileToDataUrl(files[i]) });
+          uploaded.push(await fileToPrivateData(files[i]));
         }
       }
 
@@ -1342,6 +1344,7 @@ function driveOwnerLabel(owner: DriveOwner): string {
 const FUN_DB_NAME = 'mitpatel_fun_vault';
 const FUN_DB_STORE = 'media';
 const INLINE_FUN_FALLBACK_LIMIT = 18 * 1024 * 1024;
+const PRIVATE_DATA_CHUNK_SIZE = 900 * 1024;
 
 async function buildFunPack(
   id: string,
@@ -1349,7 +1352,7 @@ async function buildFunPack(
   owner: FunOwner,
   picks: MediaPick[],
   savedFiles: File[],
-  uploaded: Array<{ storagePath?: string; data?: string }>,
+  uploaded: Array<{ storagePath?: string; data?: string; dataChunks?: string[] }>,
   by?: FunPack['by']
 ): Promise<FunPack> {
   const files: FunSavedMedia[] = [];
@@ -1369,7 +1372,7 @@ async function buildFunPack(
 async function mediaPickToSavedMedia(
   pick: MediaPick,
   savedFile?: File,
-  uploaded?: { storagePath?: string; data?: string }
+  uploaded?: { storagePath?: string; data?: string; dataChunks?: string[] }
 ): Promise<FunSavedMedia> {
   const mediaFile = savedFile || pick.file;
   const storageKey = `fun_media_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -1378,6 +1381,7 @@ async function mediaPickToSavedMedia(
     name: mediaFile.name || pick.name,
     size: mediaFile.size,
     data: uploaded?.data,
+    dataChunks: uploaded?.dataChunks,
     storagePath: uploaded?.storagePath
   };
   try {
@@ -1396,6 +1400,12 @@ async function mediaPickToSavedMedia(
   }
 }
 
+async function fileToPrivateData(file: File): Promise<{ data?: string; dataChunks?: string[] }> {
+  const dataUrl = await fileToDataUrl(file);
+  if (dataUrl.length <= PRIVATE_DATA_CHUNK_SIZE) return { data: dataUrl };
+  return { dataChunks: chunkString(dataUrl, PRIVATE_DATA_CHUNK_SIZE) };
+}
+
 function fileToDataUrl(file: File): Promise<string> {
   if (file.size > INLINE_FUN_FALLBACK_LIMIT) {
     const mb = Math.round((file.size / 1024 / 1024) * 10) / 10;
@@ -1407,6 +1417,14 @@ function fileToDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error || new Error(`Could not read ${file.name}`));
     reader.readAsDataURL(file);
   });
+}
+
+function chunkString(value: string, size: number): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < value.length; i += size) {
+    chunks.push(value.slice(i, i + size));
+  }
+  return chunks;
 }
 
 function openFunDb(): Promise<IDBDatabase> {

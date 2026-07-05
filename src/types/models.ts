@@ -102,6 +102,7 @@ export interface FunSavedMedia {
   name: string;
   url?: string;
   data?: string;
+  dataChunks?: string[];
   storagePath?: string;
   preview?: string;
   storageKey?: string;

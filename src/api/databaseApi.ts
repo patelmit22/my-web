@@ -1,13 +1,14 @@
-import type { AtlasEntry, FunPack, Game, HerConfig, Transaction, WorkTask } from '../types/models';
+import type { AtlasEntry, FunPack, Game, HerConfig, QotdCategory, QotdDay, Transaction, UserRole, WorkTask } from '../types/models';
 import { db } from './firebaseClient';
 
-export type DataPath = 'entries' | 'txns' | 'tasks' | 'games' | 'funPacks';
+export type DataPath = 'entries' | 'txns' | 'tasks' | 'games' | 'funPacks' | 'qotd';
 export type DataMap = {
   entries: AtlasEntry;
   txns: Transaction;
   tasks: WorkTask;
   games: Game;
   funPacks: FunPack;
+  qotd: QotdDay;
 };
 
 export function subscribeList<TPath extends DataPath>(
@@ -79,6 +80,62 @@ export function saveFunPack(pack: FunPack): Promise<void> {
 
 export function deleteFunPack(id: string): Promise<void> {
   return db.ref(`funPacks/${id}`).remove();
+}
+
+export function subscribeQotd(callback: (days: QotdDay[]) => void, onError: (error: Error) => void): () => void {
+  const ref = db.ref('qotd');
+  const listener = ref.on(
+    'value',
+    snap => {
+      const days: QotdDay[] = [];
+      snap.forEach(child => {
+        const value = child.val() || {};
+        days.push({
+          date: child.key || value.date || '',
+          q: value.q || '',
+          category: value.category || 'sweet',
+          me: value.me || null,
+          her: value.her || null,
+          votes: {
+            meVotedHer: value.votes?.meVotedHer ?? null,
+            herVotedMe: value.votes?.herVotedMe ?? null
+          }
+        });
+      });
+      callback(days.filter(day => day.date).sort((a, b) => b.date.localeCompare(a.date)));
+    },
+    error => onError(error)
+  );
+  return () => ref.off('value', listener);
+}
+
+export async function saveQotdAnswer(
+  dateKey: string,
+  role: UserRole,
+  text: string,
+  question: string,
+  category: QotdCategory
+): Promise<void> {
+  const cleanText = text.trim();
+  if (!cleanText) throw new Error('answer is empty');
+
+  const dayRef = db.ref(`qotd/${dateKey}`);
+  const snap = await dayRef.once('value');
+  const updates: Record<string, unknown> = {
+    [`${role}`]: {
+      text: cleanText,
+      at: new Date().toISOString()
+    }
+  };
+
+  if (!snap.child('q').exists()) updates.q = question;
+  if (!snap.child('category').exists()) updates.category = category;
+  await dayRef.update(updates);
+}
+
+export function voteQotd(dateKey: string, voter: UserRole, active: boolean): Promise<void> {
+  const field = voter === 'me' ? 'meVotedHer' : 'herVotedMe';
+  return db.ref(`qotd/${dateKey}/votes/${field}`).set(active);
 }
 
 export async function getHerConfig(): Promise<HerConfig | null> {

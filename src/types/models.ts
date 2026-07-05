@@ -118,4 +118,27 @@ export interface FunPack {
   files: FunSavedMedia[];
 }
 
-export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'documents' | 'fun' | 'settings';
+export type QotdCategory = 'sweet' | 'silly' | 'memory' | 'future' | 'deep' | 'romantic' | 'spicy' | 'task';
+
+export interface QotdAnswer {
+  text: string;
+  at: string;
+}
+
+export interface QotdVotes {
+  meVotedHer?: boolean | null;
+  herVotedMe?: boolean | null;
+}
+
+export interface QotdDay {
+  date: string;
+  q: string;
+  category: QotdCategory;
+  me: QotdAnswer | null;
+  her: QotdAnswer | null;
+  votes?: QotdVotes;
+}
+
+export type QotdScoreView = 'week' | 'month' | 'all';
+
+export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'us' | 'documents' | 'fun' | 'settings';

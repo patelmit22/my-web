@@ -12,11 +12,14 @@ import {
   saveFunPack as saveFunPackApi,
   saveGame as saveGameApi,
   saveHerConfig,
+  saveQotdAnswer,
   saveTask,
   saveTransaction,
   subscribeHerConfig,
   subscribeList,
-  updateTaskColumn
+  subscribeQotd,
+  updateTaskColumn,
+  voteQotd
 } from './api/databaseApi';
 import { renderSidebar } from './components/Sidebar';
 import { Lightbox } from './components/Lightbox';
@@ -25,6 +28,7 @@ import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
 import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
 import { deleteStorageFile, getStorageFileUrl, uploadFunMedia } from './api/storageApi';
+import { localDateKey, questionForDate } from './data/qotdQuestions';
 import { state } from './state/appState';
 import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
@@ -43,6 +47,7 @@ import {
   renderHomePage,
   renderMediaPreviews,
   renderSettingsPage,
+  renderUsPage,
   renderWorkMediaPreviews,
   renderWorkPage,
   renderAuthPage
@@ -140,6 +145,7 @@ export class DashboardApp {
       case 'work': return renderWorkPage(state);
       case 'atlas': return renderAtlasPage(state);
       case 'games': return renderGamesPage(state);
+      case 'us': return renderUsPage(state);
       case 'documents': return renderDocumentsPage(state);
       case 'fun': return renderFunPage(state);
       case 'settings': return renderSettingsPage(state);
@@ -168,6 +174,9 @@ export class DashboardApp {
       if (target.id === 'atlas-search') {
         state.atlasSearch = (target as HTMLInputElement).value;
         this.refreshEntriesList();
+      }
+      if (target.id === 'qotd-draft') {
+        state.qotdDraft = (target as HTMLTextAreaElement).value;
       }
       if (target instanceof HTMLInputElement && target.classList.contains('doc-rename-input')) {
         const index = Number(target.dataset.docIndex || -1);
@@ -287,6 +296,16 @@ export class DashboardApp {
       case 'open-game-modal':
         this.resetGameModal();
         openModal('modal-game');
+        break;
+      case 'save-qotd':
+        await this.saveQotd();
+        break;
+      case 'qotd-score-view':
+        state.qotdScoreView = (target.dataset.view as typeof state.qotdScoreView) || 'week';
+        this.renderMainOnly();
+        break;
+      case 'vote-qotd':
+        await this.voteQotd(target.dataset.date || localDateKey(), target.dataset.next === 'true');
         break;
       case 'connect-drive':
         await this.connectDriveAndLoad();
@@ -515,7 +534,7 @@ export class DashboardApp {
 
   private pageFromHash(): PageId | null {
     const page = window.location.hash.replace('#', '') as PageId;
-    return ['home', 'finance', 'work', 'atlas', 'games', 'documents', 'fun', 'settings'].includes(page) ? page : null;
+    return ['home', 'finance', 'work', 'atlas', 'games', 'us', 'documents', 'fun', 'settings'].includes(page) ? page : null;
   }
 
   private subscribeToData(): void {
@@ -545,6 +564,11 @@ export class DashboardApp {
         saveCachedList('games', state.games);
         this.renderActiveDataPage('games');
       }, error => this.showDataError('Games', error)),
+      subscribeQotd(days => {
+        state.qotdDays = days;
+        saveCachedList('qotd', state.qotdDays);
+        this.renderActiveDataPage('us');
+      }, error => this.showDataError('Us questions', error)),
       subscribeList('funPacks', packs => {
         state.funPacks = packs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         saveCachedList('funPacks', state.funPacks);
@@ -566,6 +590,7 @@ export class DashboardApp {
     state.txns = loadCachedList('txns').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     state.tasks = loadCachedList('tasks');
     state.games = loadCachedList('games');
+    state.qotdDays = loadCachedList('qotd').sort((a, b) => b.date.localeCompare(a.date));
     state.funPacks = loadCachedList('funPacks').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
@@ -1305,6 +1330,41 @@ export class DashboardApp {
     } finally {
       button.disabled = false;
       button.textContent = 'save game changes';
+    }
+  }
+
+  private async saveQotd(): Promise<void> {
+    const role = state.currentUser?.role;
+    if (!role) return this.toast.show('sign in first', 'err');
+    const text = state.qotdDraft.trim();
+    if (!text) return this.toast.show('write your answer first', 'err');
+    const dateKey = localDateKey();
+    const existing = state.qotdDays.find(day => day.date === dateKey);
+    if (existing?.[role]) return this.toast.show('your answer is already locked for today', 'err');
+    const picked = questionForDate(dateKey);
+    const question = existing?.q || picked.q;
+    const category = existing?.category || picked.category;
+    try {
+      await saveQotdAnswer(dateKey, role, text, question, category);
+      state.qotdDraft = '';
+      this.toast.show('answer locked ✓', 'ok');
+    } catch (error) {
+      console.error('daily question save failed', error);
+      this.toast.show(`answer did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    }
+  }
+
+  private async voteQotd(dateKey: string, next: boolean): Promise<void> {
+    const role = state.currentUser?.role;
+    if (!role) return this.toast.show('sign in first', 'err');
+    const day = state.qotdDays.find(item => item.date === dateKey);
+    if (!day?.me || !day.her) return this.toast.show('both answers need to be saved first', 'err');
+    try {
+      await voteQotd(dateKey, role, next);
+      this.toast.show(next ? '+2 vote saved' : 'vote removed', 'ok');
+    } catch (error) {
+      console.error('daily question vote failed', error);
+      this.toast.show(`vote did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
     }
   }
 

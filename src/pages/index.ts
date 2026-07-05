@@ -4,6 +4,7 @@ export { renderFinancePage } from './FinancePage';
 export { renderWorkMediaPreviews, renderWorkPage } from './WorkPage';
 export { filteredEntries, renderAtlasPage, renderEntriesList, renderMediaPreviews } from './AtlasPage';
 export { renderGameCoverPreview, renderGamesPage, renderGameMediaPreviews } from './GamesPage';
+export { renderUsPage } from './UsPage';
 export { renderDocumentsPage } from './DocumentsPage';
 export { renderFunPage, renderFunPreviews } from './FunPage';
 export { renderSettingsPage } from './SettingsPage';

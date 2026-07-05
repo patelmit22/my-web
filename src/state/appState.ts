@@ -1,4 +1,4 @@
-import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, PageId, Transaction, WorkTask } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, PageId, QotdDay, QotdScoreView, Transaction, WorkTask } from '../types/models';
 import type { MediaPick } from '../utils/media';
 
 export interface AppState {
@@ -31,6 +31,9 @@ export interface AppState {
   funMediaPicks: MediaPick[];
   funPacks: FunPack[];
   funStatus: string;
+  qotdDays: QotdDay[];
+  qotdDraft: string;
+  qotdScoreView: QotdScoreView;
   lightboxUrls: string[];
   lightboxIndex: number;
   herConfig: HerConfig | null;
@@ -70,6 +73,9 @@ export const state: AppState = {
   funMediaPicks: [],
   funPacks: [],
   funStatus: '',
+  qotdDays: [],
+  qotdDraft: '',
+  qotdScoreView: 'week',
   lightboxUrls: [],
   lightboxIndex: 0,
   herConfig: null,

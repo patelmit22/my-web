@@ -24,7 +24,7 @@ import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
 import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
-import { deleteStorageFile, uploadFunMedia } from './api/storageApi';
+import { deleteStorageFile, getStorageFileUrl, uploadFunMedia } from './api/storageApi';
 import { state } from './state/appState';
 import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
@@ -666,7 +666,13 @@ export class DashboardApp {
     const mediaHtml: string[] = [];
     for (const file of pack.files) {
       let url = '';
-      if (file.url) {
+      if (file.storagePath) {
+        try {
+          url = await getStorageFileUrl(file.storagePath);
+        } catch (error) {
+          console.warn('Could not create Firebase media URL', error);
+        }
+      } else if (file.url) {
         url = file.url;
       } else if (file.storageKey) {
         const blob = await getFunBlob(file.storageKey);
@@ -737,10 +743,13 @@ export class DashboardApp {
         }
       }
 
-      const uploaded: Array<{ url: string; storagePath: string }> = [];
+      const uploaded: Array<{ storagePath: string }> = [];
       for (let i = 0; i < files.length; i += 1) {
-        button.textContent = `uploading ${i + 1}/${files.length}...`;
-        uploaded.push(await uploadFunMedia(files[i], state.funOwner, packId, i));
+        const mb = Math.round((files[i].size / 1024 / 1024) * 10) / 10;
+        button.textContent = `uploading ${i + 1}/${files.length} · 0% of ${mb} MB`;
+        uploaded.push(await uploadFunMedia(files[i], state.funOwner, packId, i, percent => {
+          button.textContent = `uploading ${i + 1}/${files.length} · ${percent}% of ${mb} MB`;
+        }));
       }
 
       button.textContent = 'saving pack...';
@@ -1331,7 +1340,7 @@ async function buildFunPack(
   owner: FunOwner,
   picks: MediaPick[],
   savedFiles: File[],
-  uploaded: Array<{ url: string; storagePath: string }>,
+  uploaded: Array<{ storagePath: string }>,
   by?: FunPack['by']
 ): Promise<FunPack> {
   const files: FunSavedMedia[] = [];
@@ -1351,7 +1360,7 @@ async function buildFunPack(
 async function mediaPickToSavedMedia(
   pick: MediaPick,
   savedFile?: File,
-  uploaded?: { url: string; storagePath: string }
+  uploaded?: { storagePath: string }
 ): Promise<FunSavedMedia> {
   const mediaFile = savedFile || pick.file;
   const storageKey = `fun_media_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -1359,7 +1368,6 @@ async function mediaPickToSavedMedia(
     type: pick.type,
     name: mediaFile.name || pick.name,
     size: mediaFile.size,
-    url: uploaded?.url,
     storagePath: uploaded?.storagePath
   };
   try {

@@ -2,26 +2,57 @@ import type { FunOwner } from '../types/models';
 import { storage } from './firebaseClient';
 
 export interface UploadedMedia {
-  url: string;
   storagePath: string;
 }
 
-export async function uploadFunMedia(file: File, owner: FunOwner, packId: string, index: number): Promise<UploadedMedia> {
+export async function uploadFunMedia(
+  file: File,
+  owner: FunOwner,
+  packId: string,
+  index: number,
+  onProgress?: (percent: number) => void
+): Promise<UploadedMedia> {
   const storagePath = `fun-vault/${owner}/${packId}/${index + 1}-${safeStorageName(file.name)}`;
   const ref = storage.ref(storagePath);
-  await ref.put(file, {
-    contentType: file.type || undefined,
-    customMetadata: {
-      originalName: file.name,
-      owner
-    }
+  const task = ref.put(file, {
+    contentType: file.type || 'application/octet-stream',
+    customMetadata: { originalName: file.name, owner }
   });
-  const url = await ref.getDownloadURL();
-  return { url, storagePath };
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      task.cancel();
+      reject(new Error('Upload timed out. Try a smaller video or a stronger Wi-Fi connection.'));
+    }, 10 * 60 * 1000);
+
+    task.on(
+      'state_changed',
+      snap => {
+        if (snap.totalBytes > 0) {
+          onProgress?.(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+        }
+      },
+      error => {
+        window.clearTimeout(timeout);
+        reject(error);
+      },
+      () => {
+        window.clearTimeout(timeout);
+        onProgress?.(100);
+        resolve();
+      }
+    );
+  });
+
+  return { storagePath };
 }
 
 export async function deleteStorageFile(storagePath: string): Promise<void> {
   await storage.ref(storagePath).delete();
+}
+
+export async function getStorageFileUrl(storagePath: string): Promise<string> {
+  return storage.ref(storagePath).getDownloadURL();
 }
 
 function safeStorageName(name: string): string {

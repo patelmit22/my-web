@@ -2,7 +2,7 @@ import type { FunOwner } from '../types/models';
 import { storage } from './firebaseClient';
 
 export interface UploadedMedia {
-  storagePath: string;
+  storagePath?: string;
 }
 
 export async function uploadFunMedia(
@@ -20,24 +20,49 @@ export async function uploadFunMedia(
   });
 
   await new Promise<void>((resolve, reject) => {
+    let hasStarted = false;
+    let settled = false;
+    const clearTimers = () => {
+      window.clearTimeout(startTimeout);
+      window.clearTimeout(timeout);
+    };
+    const fail = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimers();
+      try {
+        task.cancel();
+      } catch {
+        // Already finished or cancelled.
+      }
+      reject(error);
+    };
+    const startTimeout = window.setTimeout(() => {
+      if (!hasStarted) {
+        fail(new Error('Storage upload did not start. Falling back to private database save.'));
+      }
+    }, 15000);
     const timeout = window.setTimeout(() => {
-      task.cancel();
-      reject(new Error('Upload timed out. Try a smaller video or a stronger Wi-Fi connection.'));
+      fail(new Error('Upload timed out. Try a smaller video or a stronger Wi-Fi connection.'));
     }, 10 * 60 * 1000);
 
     task.on(
       'state_changed',
       snap => {
+        if (snap.bytesTransferred > 0) {
+          hasStarted = true;
+        }
         if (snap.totalBytes > 0) {
           onProgress?.(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
         }
       },
       error => {
-        window.clearTimeout(timeout);
-        reject(error);
+        fail(error);
       },
       () => {
-        window.clearTimeout(timeout);
+        if (settled) return;
+        settled = true;
+        clearTimers();
         onProgress?.(100);
         resolve();
       }

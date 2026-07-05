@@ -1379,11 +1379,11 @@ async function mediaPickToSavedMedia(
   const base: FunSavedMedia = {
     type: pick.type,
     name: mediaFile.name || pick.name,
-    size: mediaFile.size,
-    data: uploaded?.data,
-    dataChunks: uploaded?.dataChunks,
-    storagePath: uploaded?.storagePath
+    size: mediaFile.size
   };
+  if (uploaded?.data) base.data = uploaded.data;
+  if (uploaded?.dataChunks?.length) base.dataChunks = uploaded.dataChunks;
+  if (uploaded?.storagePath) base.storagePath = uploaded.storagePath;
   try {
     await putFunBlob(storageKey, mediaFile);
     base.storageKey = storageKey;

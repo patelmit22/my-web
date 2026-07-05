@@ -1,6 +1,7 @@
 import { cleanAuthError, configureAuthPersistence, onAuthChanged, resolveCurrentUser, signIn, signOut } from './api/authApi';
 import {
   deleteEntry,
+  deleteFunPack as deleteFunPackApi,
   deleteGame,
   deleteTask,
   deleteTransaction,
@@ -8,6 +9,7 @@ import {
   type DataPath,
   removeHerConfig,
   saveEntry as saveEntryApi,
+  saveFunPack as saveFunPackApi,
   saveGame as saveGameApi,
   saveHerConfig,
   saveTask,
@@ -22,6 +24,7 @@ import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
 import { Toast } from './components/Toast';
 import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
+import { deleteStorageFile, uploadFunMedia } from './api/storageApi';
 import { state } from './state/appState';
 import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
@@ -322,7 +325,7 @@ export class DashboardApp {
         await this.saveFunToCloudFiles();
         break;
       case 'delete-fun-pack':
-        this.deleteFunPack(target.dataset.id || '');
+        await this.deleteFunPack(target.dataset.id || '');
         break;
       case 'open-fun-pack':
         await this.openFunPack(target.dataset.id || '');
@@ -541,7 +544,12 @@ export class DashboardApp {
         state.games = games;
         saveCachedList('games', state.games);
         this.renderActiveDataPage('games');
-      }, error => this.showDataError('Games', error))
+      }, error => this.showDataError('Games', error)),
+      subscribeList('funPacks', packs => {
+        state.funPacks = packs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        saveCachedList('funPacks', state.funPacks);
+        this.renderActiveDataPage('fun');
+      }, error => this.showDataError('Fun vault', error))
     );
   }
 
@@ -558,7 +566,7 @@ export class DashboardApp {
     state.txns = loadCachedList('txns').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     state.tasks = loadCachedList('tasks');
     state.games = loadCachedList('games');
-    state.funPacks = loadFunPacks();
+    state.funPacks = loadCachedList('funPacks').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   private showDataError(area: string, error: Error): void {
@@ -615,7 +623,7 @@ export class DashboardApp {
     const save = document.querySelector<HTMLButtonElement>('.fun-save');
     if (save) {
       save.disabled = !state.funMediaPicks.length;
-      save.textContent = `save ${state.funMediaPicks.length} to iCloud / Files`;
+      save.textContent = `save ${state.funMediaPicks.length} to Firebase vault`;
     }
   }
 
@@ -628,18 +636,26 @@ export class DashboardApp {
     const save = document.querySelector<HTMLButtonElement>('.fun-save');
     if (save) {
       save.disabled = !state.funMediaPicks.length;
-      save.textContent = state.funMediaPicks.length ? `save ${state.funMediaPicks.length} to iCloud / Files` : 'save to iCloud / Files';
+      save.textContent = state.funMediaPicks.length ? `save ${state.funMediaPicks.length} to Firebase vault` : 'save to Firebase vault';
     }
   }
 
-  private deleteFunPack(id: string): void {
+  private async deleteFunPack(id: string): Promise<void> {
     const pack = state.funPacks.find(item => item.id === id);
-    pack?.files.forEach(file => {
-      if (file.storageKey) void deleteFunBlob(file.storageKey);
-    });
+    await Promise.all((pack?.files || []).map(async file => {
+      if (file.storageKey) await deleteFunBlob(file.storageKey);
+      if (file.storagePath) {
+        try {
+          await deleteStorageFile(file.storagePath);
+        } catch (error) {
+          console.warn('Could not delete Firebase Storage file', error);
+        }
+      }
+    }));
+    await deleteFunPackApi(id);
     state.funPacks = state.funPacks.filter(item => item.id !== id);
-    saveFunPacks(state.funPacks);
-    state.funStatus = 'saved preview removed';
+    saveCachedList('funPacks', state.funPacks);
+    state.funStatus = 'saved pack deleted';
     this.renderMainOnly();
   }
 
@@ -650,7 +666,9 @@ export class DashboardApp {
     const mediaHtml: string[] = [];
     for (const file of pack.files) {
       let url = '';
-      if (file.storageKey) {
+      if (file.url) {
+        url = file.url;
+      } else if (file.storageKey) {
         const blob = await getFunBlob(file.storageKey);
         if (blob) {
           url = URL.createObjectURL(blob);
@@ -665,10 +683,10 @@ export class DashboardApp {
               : `<img src="${url}" alt="${escapeAttr(file.name)}">`
             : file.preview
               ? `<img src="${file.preview}" alt="${escapeAttr(file.name)}">`
-              : `<div class="fun-viewer-missing">${file.type === 'video' ? '🎥' : '📸'}<span>saved in iCloud / Files</span></div>`}
+              : `<div class="fun-viewer-missing">${file.type === 'video' ? '🎥' : '📸'}<span>media link unavailable</span></div>`}
         </div>
         <div class="fun-viewer-name">${escapeHtml(file.name)}</div>
-        ${!url ? '<div class="fun-viewer-note">Full file is in iCloud / Files. New saves from now on can open here too.</div>' : ''}
+        ${!url ? '<div class="fun-viewer-note">This older item has no Firebase video/photo link yet. Save it again to make it playable everywhere.</div>' : ''}
       </div>`);
     }
     const date = new Date(pack.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -701,6 +719,7 @@ export class DashboardApp {
     button.disabled = true;
     try {
       const title = optionalFormValue('#fun-title') || `${state.funOwner === 'her' ? 'shrushti' : 'mit'} fun`;
+      const packId = `fun_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const files: File[] = [];
       for (let i = 0; i < state.funMediaPicks.length; i += 1) {
         const pick = state.funMediaPicks[i];
@@ -718,40 +737,28 @@ export class DashboardApp {
         }
       }
 
-      button.textContent = 'opening save sheet...';
-      const shareData: ShareData = {
-        title,
-        text: `Save ${title} to iCloud Drive / Files`,
-        files
-      };
-      if (navigator.canShare?.(shareData)) {
-        try {
-          await navigator.share(shareData);
-          state.funStatus = 'shared to Files/iCloud flow ✓';
-          this.toast.show('choose Save to Files to put it in iCloud', 'ok');
-        } catch (error) {
-          console.warn('Share sheet blocked, falling back to downloads', error);
-          downloadFiles(files);
-          state.funStatus = 'Chrome blocked the save sheet, so download started instead. Move it into iCloud Drive.';
-          this.toast.show('download started instead ✓', 'ok');
-        }
-      } else {
-        downloadFiles(files);
-        state.funStatus = 'download started. Move the downloads into iCloud Drive if your browser asks.';
-        this.toast.show('downloads started ✓', 'ok');
+      const uploaded: Array<{ url: string; storagePath: string }> = [];
+      for (let i = 0; i < files.length; i += 1) {
+        button.textContent = `uploading ${i + 1}/${files.length}...`;
+        uploaded.push(await uploadFunMedia(files[i], state.funOwner, packId, i));
       }
-      const pack = await buildFunPack(title, state.funOwner, state.funMediaPicks, files);
+
+      button.textContent = 'saving pack...';
+      const pack = await buildFunPack(packId, title, state.funOwner, state.funMediaPicks, files, uploaded, state.currentUser?.role);
+      await saveFunPackApi(pack);
       state.funPacks = [pack, ...state.funPacks].slice(0, 80);
-      saveFunPacks(state.funPacks);
+      saveCachedList('funPacks', state.funPacks);
+      state.funStatus = 'saved to Firebase vault ✓';
+      this.toast.show('saved to Firebase vault ✓', 'ok');
       releasePicks(state.funMediaPicks);
       state.funMediaPicks = [];
     } catch (error) {
-      console.error('iCloud handoff failed', error);
-      state.funStatus = error instanceof Error ? error.message : 'iCloud handoff failed';
+      console.error('Firebase Fun vault save failed', error);
+      state.funStatus = error instanceof Error ? error.message : 'Firebase save failed';
       this.toast.show(`could not save: ${state.funStatus}`, 'err');
     } finally {
       button.disabled = false;
-      button.textContent = `save ${state.funMediaPicks.length || ''} to iCloud / Files`;
+      button.textContent = `save ${state.funMediaPicks.length || ''} to Firebase vault`;
       this.renderMainOnly();
     }
   }
@@ -1315,53 +1322,46 @@ function driveOwnerLabel(owner: DriveOwner): string {
   return 'Mit personal';
 }
 
-const FUN_PACKS_KEY = 'mitpatel_fun_packs_v1';
 const FUN_DB_NAME = 'mitpatel_fun_vault';
 const FUN_DB_STORE = 'media';
 
-function loadFunPacks(): FunPack[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(FUN_PACKS_KEY) || '[]') as FunPack[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveFunPacks(packs: FunPack[]): void {
-  try {
-    localStorage.setItem(FUN_PACKS_KEY, JSON.stringify(packs));
-  } catch {
-    const lighter = packs.map(pack => ({
-      ...pack,
-      files: pack.files.map(file => ({ type: file.type, name: file.name }))
-    }));
-    try {
-      localStorage.setItem(FUN_PACKS_KEY, JSON.stringify(lighter));
-    } catch {
-      // The real files are already in iCloud/Files. This is only a small local history shelf.
-    }
-  }
-}
-
-async function buildFunPack(title: string, owner: FunOwner, picks: MediaPick[], savedFiles: File[]): Promise<FunPack> {
+async function buildFunPack(
+  id: string,
+  title: string,
+  owner: FunOwner,
+  picks: MediaPick[],
+  savedFiles: File[],
+  uploaded: Array<{ url: string; storagePath: string }>,
+  by?: FunPack['by']
+): Promise<FunPack> {
   const files: FunSavedMedia[] = [];
   for (let i = 0; i < picks.length; i += 1) {
-    files.push(await mediaPickToSavedMedia(picks[i], savedFiles[i]));
+    files.push(await mediaPickToSavedMedia(picks[i], savedFiles[i], uploaded[i]));
   }
   return {
-    id: `fun_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id,
     owner,
     title,
     date: new Date().toISOString(),
+    by,
     files
   };
 }
 
-async function mediaPickToSavedMedia(pick: MediaPick, savedFile?: File): Promise<FunSavedMedia> {
+async function mediaPickToSavedMedia(
+  pick: MediaPick,
+  savedFile?: File,
+  uploaded?: { url: string; storagePath: string }
+): Promise<FunSavedMedia> {
   const mediaFile = savedFile || pick.file;
   const storageKey = `fun_media_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-  const base: FunSavedMedia = { type: pick.type, name: mediaFile.name || pick.name, size: mediaFile.size };
+  const base: FunSavedMedia = {
+    type: pick.type,
+    name: mediaFile.name || pick.name,
+    size: mediaFile.size,
+    url: uploaded?.url,
+    storagePath: uploaded?.storagePath
+  };
   try {
     await putFunBlob(storageKey, mediaFile);
     base.storageKey = storageKey;

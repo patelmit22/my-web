@@ -73,16 +73,16 @@ export function renderFunPage(state: AppState): string {
     <div class="page-header">
       <div>
         <div class="page-title">Fun vault</div>
-        <div class="page-sub">crazy photos and funny videos for you and Shrushti, saved through iCloud/Files instead of Firebase.</div>
+        <div class="page-sub">crazy photos and funny videos for you and Shrushti, saved in Firebase so you can open them anytime.</div>
       </div>
     </div>
 
     <div class="fun-panel">
       <div class="fun-hero">
         <div>
-          <div class="fun-kicker">iCloud handoff</div>
-          <h2>Pick memories, then save them to Files.</h2>
-          <p>Photos are compressed before saving. Videos stay as the original file so Firebase storage is never used.</p>
+          <div class="fun-kicker">Firebase vault</div>
+          <h2>Pick memories, then save them to the cloud.</h2>
+          <p>Photos are compressed before saving. Videos upload to Firebase Storage so you can play them again from the saved cards.</p>
         </div>
         <div class="fun-orbit">
           <span>📸</span><span>🎥</span><span>☁️</span>
@@ -102,7 +102,7 @@ export function renderFunPage(state: AppState): string {
         <div class="fun-fields">
           <label class="field-label" for="fun-title">folder / pack name</label>
           <input id="fun-title" class="field-input" type="text" placeholder="e.g. random funny night, beach clips, crazy day">
-          <div class="fun-help">When the share sheet opens, choose <strong>Save to Files</strong>, then pick iCloud Drive. That is the Apple-approved path.</div>
+          <div class="fun-help">Saved packs show below as cards. Tap a card later to open the photos and videos.</div>
         </div>
       </div>
 
@@ -110,14 +110,14 @@ export function renderFunPage(state: AppState): string {
       <div id="fun-previews" class="fun-previews">${renderFunPreviews(state)}</div>
 
       <button class="btn-primary fun-save" data-action="save-fun-icloud" ${!state.funMediaPicks.length ? 'disabled' : ''}>
-        save ${state.funMediaPicks.length || ''} to iCloud / Files
+        save ${state.funMediaPicks.length || ''} to Firebase vault
       </button>
       ${state.funStatus ? `<div class="drive-status">${esc(state.funStatus)}</div>` : ''}
 
       <div class="fun-saved-head">
         <div>
           <h3>saved in this vault</h3>
-          <p>small previews stay here so you can remember what you saved. full files stay in iCloud / Files.</p>
+          <p>tap a card to open saved photos and videos from Firebase.</p>
         </div>
       </div>
       ${renderFunPacks(state)}

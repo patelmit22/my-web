@@ -107,7 +107,7 @@ export function renderHomePage(state: AppState): string {
       </button>
       <button class="tile tile-fun" data-action="nav" data-page="fun">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 13l2.5-3 2 2.5 1.5-1.8L18 16H6z"/><circle cx="8" cy="9" r="1"/></svg></div>
-        <div class="tile-name">Fun vault</div><div class="tile-desc">photos, videos, iCloud</div><div class="tile-stat">no Firebase storage</div>
+        <div class="tile-name">Fun vault</div><div class="tile-desc">photos, videos, Firebase</div><div class="tile-stat">${state.funPacks.length} saved</div>
       </button>
     </div>
   </section>`;

@@ -1,12 +1,13 @@
-import type { AtlasEntry, Game, HerConfig, Transaction, WorkTask } from '../types/models';
+import type { AtlasEntry, FunPack, Game, HerConfig, Transaction, WorkTask } from '../types/models';
 import { db } from './firebaseClient';
 
-export type DataPath = 'entries' | 'txns' | 'tasks' | 'games';
+export type DataPath = 'entries' | 'txns' | 'tasks' | 'games' | 'funPacks';
 export type DataMap = {
   entries: AtlasEntry;
   txns: Transaction;
   tasks: WorkTask;
   games: Game;
+  funPacks: FunPack;
 };
 
 export function subscribeList<TPath extends DataPath>(
@@ -70,6 +71,14 @@ export async function saveGame(game: Game, existingGames: Game[]): Promise<void>
 
 export function deleteGame(id: string): Promise<void> {
   return db.ref(`games/${id}`).remove();
+}
+
+export function saveFunPack(pack: FunPack): Promise<void> {
+  return db.ref(`funPacks/${pack.id}`).set(pack);
+}
+
+export function deleteFunPack(id: string): Promise<void> {
+  return db.ref(`funPacks/${id}`).remove();
 }
 
 export async function getHerConfig(): Promise<HerConfig | null> {

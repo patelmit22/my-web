@@ -100,6 +100,8 @@ export type FunOwner = 'me' | 'her';
 export interface FunSavedMedia {
   type: 'image' | 'video';
   name: string;
+  url?: string;
+  storagePath?: string;
   preview?: string;
   storageKey?: string;
   size?: number;
@@ -110,6 +112,7 @@ export interface FunPack {
   owner: FunOwner;
   title: string;
   date: string;
+  by?: UserRole;
   files: FunSavedMedia[];
 }
 

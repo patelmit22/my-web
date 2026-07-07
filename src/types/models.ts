@@ -123,6 +123,7 @@ export type QotdCategory = 'sweet' | 'silly' | 'memory' | 'future' | 'deep' | 'r
 export interface QotdAnswer {
   text: string;
   at: string;
+  seenAt?: string;
 }
 
 export interface QotdVotes {
@@ -140,5 +141,17 @@ export interface QotdDay {
 }
 
 export type QotdScoreView = 'week' | 'month' | 'all';
+
+export interface WeeklyActivity {
+  weekKey: string;
+  suggestion: string;
+  createdAt: string;
+  seenBy?: { me?: boolean; her?: boolean };
+}
+
+export interface RoseMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'us' | 'documents' | 'fun' | 'settings';

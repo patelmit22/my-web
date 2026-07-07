@@ -1,4 +1,4 @@
-import type { AtlasEntry, FunPack, Game, HerConfig, QotdCategory, QotdDay, Transaction, UserRole, WorkTask } from '../types/models';
+import type { AtlasEntry, FunPack, Game, HerConfig, QotdAnswer, QotdCategory, QotdDay, Transaction, UserRole, WeeklyActivity, WorkTask } from '../types/models';
 import { db } from './firebaseClient';
 
 export type DataPath = 'entries' | 'txns' | 'tasks' | 'games' | 'funPacks' | 'qotd';
@@ -94,8 +94,8 @@ export function subscribeQotd(callback: (days: QotdDay[]) => void, onError: (err
           date: child.key || value.date || '',
           q: value.q || '',
           category: value.category || 'sweet',
-          me: value.me || null,
-          her: value.her || null,
+          me: normalizeQotdAnswer(value.me),
+          her: normalizeQotdAnswer(value.her),
           votes: {
             meVotedHer: value.votes?.meVotedHer ?? null,
             herVotedMe: value.votes?.herVotedMe ?? null
@@ -107,6 +107,24 @@ export function subscribeQotd(callback: (days: QotdDay[]) => void, onError: (err
     error => onError(error)
   );
   return () => ref.off('value', listener);
+}
+
+export async function markQotdSeen(
+  dateKey: string,
+  role: UserRole,
+  question: string,
+  category: QotdCategory
+): Promise<void> {
+  const dayRef = db.ref(`qotd/${dateKey}`);
+  const snap = await dayRef.once('value');
+  const updates: Record<string, unknown> = {};
+  if (!snap.child('q').exists()) updates.q = question;
+  if (!snap.child('category').exists()) updates.category = category;
+  if (Object.keys(updates).length) await dayRef.update(updates);
+
+  await dayRef.child(`${role}/seenAt`).transaction(current => {
+    return current || new Date().toISOString();
+  });
 }
 
 export async function saveQotdAnswer(
@@ -121,10 +139,13 @@ export async function saveQotdAnswer(
 
   const dayRef = db.ref(`qotd/${dateKey}`);
   const snap = await dayRef.once('value');
+  const now = new Date().toISOString();
+  const existingSeenAt = snap.child(`${role}/seenAt`).val();
   const updates: Record<string, unknown> = {
     [`${role}`]: {
       text: cleanText,
-      at: new Date().toISOString()
+      at: now,
+      seenAt: typeof existingSeenAt === 'string' && existingSeenAt ? existingSeenAt : now
     }
   };
 
@@ -136,6 +157,25 @@ export async function saveQotdAnswer(
 export function voteQotd(dateKey: string, voter: UserRole, active: boolean): Promise<void> {
   const field = voter === 'me' ? 'meVotedHer' : 'herVotedMe';
   return db.ref(`qotd/${dateKey}/votes/${field}`).set(active);
+}
+
+export async function getWeekly(weekKey: string): Promise<WeeklyActivity | null> {
+  const snap = await db.ref(`weekly/${weekKey}`).once('value');
+  const value = snap.val();
+  return value ? normalizeWeekly(weekKey, value) : null;
+}
+
+export function saveWeekly(weekKey: string, suggestion: string): Promise<void> {
+  return db.ref(`weekly/${weekKey}`).set({
+    weekKey,
+    suggestion,
+    createdAt: new Date().toISOString(),
+    seenBy: { me: false, her: false }
+  });
+}
+
+export function markWeeklySeen(weekKey: string, role: UserRole): Promise<void> {
+  return db.ref(`weekly/${weekKey}/seenBy/${role}`).set(true);
 }
 
 export async function getHerConfig(): Promise<HerConfig | null> {
@@ -155,4 +195,24 @@ export function saveHerConfig(config: HerConfig): Promise<void> {
 
 export function removeHerConfig(): Promise<void> {
   return db.ref('config/her').remove();
+}
+
+function normalizeQotdAnswer(value: unknown): QotdAnswer | null {
+  if (!value || typeof value !== 'object') return null;
+  const source = value as Partial<QotdAnswer>;
+  if (!source.text && !source.at && !source.seenAt) return null;
+  return {
+    text: typeof source.text === 'string' ? source.text : '',
+    at: typeof source.at === 'string' ? source.at : '',
+    seenAt: typeof source.seenAt === 'string' ? source.seenAt : undefined
+  };
+}
+
+function normalizeWeekly(weekKey: string, value: Partial<WeeklyActivity>): WeeklyActivity {
+  return {
+    weekKey: value.weekKey || weekKey,
+    suggestion: value.suggestion || '',
+    createdAt: value.createdAt || '',
+    seenBy: value.seenBy || {}
+  };
 }

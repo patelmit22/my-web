@@ -3,17 +3,17 @@ import type { QotdCategory, QotdDay, UserRole } from '../types/models';
 import { fmtDate } from '../utils/format';
 import { esc } from '../utils/sanitize';
 import { localDateKey, questionForDate } from '../data/qotdQuestions';
-import { firstResponder, scoreQotdDays } from '../utils/qotdScore';
+import { fastestResponder, hasQotdAnswer, scoreQotdDays } from '../utils/qotdScore';
 
 const CATEGORY_META: Record<QotdCategory, { label: string; icon: string }> = {
-  sweet: { label: 'sweet', icon: '💌' },
-  silly: { label: 'silly', icon: '🫧' },
-  memory: { label: 'memory', icon: '📸' },
-  future: { label: 'future', icon: '🗺️' },
-  deep: { label: 'deep', icon: '🌙' },
-  romantic: { label: 'romantic', icon: '🌹' },
+  sweet: { label: 'sweet', icon: '✿' },
+  silly: { label: 'silly', icon: '🎲' },
+  memory: { label: 'memory', icon: '🕰' },
+  future: { label: 'future', icon: '⭐' },
+  deep: { label: 'deep', icon: '🌊' },
+  romantic: { label: 'romantic', icon: '💗' },
   spicy: { label: 'spicy', icon: '🔥' },
-  task: { label: 'task', icon: '✨' }
+  task: { label: 'task', icon: '🎯' }
 };
 
 export function renderUsPage(state: AppState): string {
@@ -31,7 +31,7 @@ export function renderUsPage(state: AppState): string {
   const userRole = state.currentUser?.role || 'me';
   const score = scoreQotdDays(state.qotdDays, state.qotdScoreView);
   const history = state.qotdDays
-    .filter(day => day.date !== todayKey && day.me && day.her)
+    .filter(day => day.date !== todayKey && hasQotdAnswer(day.me) && hasQotdAnswer(day.her))
     .sort((a, b) => b.date.localeCompare(a.date));
 
   return `<section class="page active us-page" id="page-us">
@@ -66,12 +66,12 @@ export function renderUsPage(state: AppState): string {
 }
 
 function renderTodayAnswerArea(day: QotdDay, state: AppState, userRole: UserRole): string {
-  const myAnswer = day[userRole];
-  const bothAnswered = Boolean(day.me && day.her);
+  const myAnswer = hasQotdAnswer(day[userRole]) ? day[userRole] : null;
+  const bothAnswered = hasQotdAnswer(day.me) && hasQotdAnswer(day.her);
   if (!myAnswer) {
     return `<div class="us-answer-form">
       <textarea class="field-ta us-answer-ta" id="qotd-draft" placeholder="write your answer here...">${esc(state.qotdDraft)}</textarea>
-      <button class="btn-primary us-save" data-action="save-qotd">lock my answer</button>
+      <button class="btn-primary us-save" data-action="save-qotd">lock in my answer</button>
     </div>`;
   }
 
@@ -97,13 +97,14 @@ function renderTodayAnswerArea(day: QotdDay, state: AppState, userRole: UserRole
 
 function renderAnswerCard(day: QotdDay, role: UserRole, viewer: UserRole): string {
   const answer = day[role];
+  if (!hasQotdAnswer(answer)) return '';
   const other = role !== viewer;
   const voteField = viewer === 'me' ? 'meVotedHer' : 'herVotedMe';
   const hasVotedForThis = other && Boolean(day.votes?.[voteField]);
   return `<article class="us-answer-card ${role}">
     <div class="us-answer-name">${roleLabel(role)}</div>
     <p>${esc(answer?.text || '')}</p>
-    ${other ? `<button class="us-vote ${hasVotedForThis ? 'active' : ''}" data-action="vote-qotd" data-date="${esc(day.date)}" data-next="${hasVotedForThis ? 'false' : 'true'}">${hasVotedForThis ? 'voted +2' : 'give +2'}</button>` : ''}
+    ${other ? `<button class="us-vote ${hasVotedForThis ? 'active' : ''}" data-action="vote-qotd" data-date="${esc(day.date)}" data-next="${hasVotedForThis ? 'false' : 'true'}">${hasVotedForThis ? 'favorite saved' : '❤️ your favorite'}</button>` : ''}
   </article>`;
 }
 
@@ -138,10 +139,10 @@ function renderScoreboard(state: AppState): string {
       ${scoreTab('all', state.qotdScoreView)}
     </div>
     <div class="us-score-row">
-      <div><span>Mit</span><strong>${score.me}</strong><small>${score.first.me} first · ${score.votes.me} votes</small></div>
-      <div><span>Shrushti</span><strong>${score.her}</strong><small>${score.first.her} first · ${score.votes.her} votes</small></div>
+      <div><span>Mit</span><strong>${score.me}</strong><small>${score.fastest.me} fastest · ${score.votes.me} favorites</small></div>
+      <div><span>Shrushti</span><strong>${score.her}</strong><small>${score.fastest.her} fastest · ${score.votes.her} favorites</small></div>
     </div>
-    <div class="us-score-note">+1 for answering first · +2 when the other person votes for your answer</div>
+    <div class="us-score-note">+1 for fastest after opening the question · +2 when the other person picks your favorite answer</div>
   </aside>`;
 }
 
@@ -150,8 +151,8 @@ function scoreTab(view: AppState['qotdScoreView'], active: AppState['qotdScoreVi
 }
 
 function renderFirstBadge(day: QotdDay): string {
-  const first = firstResponder(day);
-  return first ? `<div class="us-first-badge">⚡ ${roleLabel(first)} answered first</div>` : '';
+  const fastest = fastestResponder(day);
+  return fastest ? `<div class="us-first-badge">⚡ ${roleLabel(fastest)} answered fastest</div>` : '';
 }
 
 function categoryChip(category: QotdCategory): string {

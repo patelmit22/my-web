@@ -5,6 +5,9 @@ import {
   deleteGame,
   deleteTask,
   deleteTransaction,
+  getWeekly,
+  markQotdSeen,
+  markWeeklySeen,
   type DataMap,
   type DataPath,
   removeHerConfig,
@@ -15,16 +18,19 @@ import {
   saveQotdAnswer,
   saveTask,
   saveTransaction,
+  saveWeekly,
   subscribeHerConfig,
   subscribeList,
   subscribeQotd,
   updateTaskColumn,
   voteQotd
 } from './api/databaseApi';
+import { roseChat, roseGreeting, roseWeekly } from './api/rose';
 import { renderSidebar } from './components/Sidebar';
 import { Lightbox } from './components/Lightbox';
 import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
+import { renderRoseFab } from './components/RoseFab';
 import { Toast } from './components/Toast';
 import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
 import { deleteStorageFile, getStorageFileUrl, uploadFunMedia } from './api/storageApi';
@@ -33,6 +39,8 @@ import { state } from './state/appState';
 import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
 import { compressImageFile, fileToPick, releasePicks, serializeMedia, type MediaPick } from './utils/media';
+import { isSunday, weekKeyForDate } from './utils/qotdDates';
+import { hasQotdAnswer } from './utils/qotdScore';
 import {
   filteredEntries,
   renderAtlasPage,
@@ -70,15 +78,26 @@ export class DashboardApp {
       if (!user) {
         this.disposeDataSubscriptions();
         state.currentUser = null;
+        state.weeklyActivity = null;
+        state.rosePanelOpen = false;
+        state.roseConvo = [];
+        state.roseInput = '';
+        state.roseBusy = false;
+        state.roseError = '';
+        state.roseGreeting = '';
+        state.roseGreetingDismissed = false;
         this.renderAuth();
         return;
       }
       state.currentUser = await resolveCurrentUser(user.email || '');
       state.activePage = 'home';
+      this.resetRoseSession();
       this.hydrateCachedData();
       this.renderApp();
       this.replaceHistory('home');
       this.subscribeToData();
+      void this.loadRoseGreeting();
+      void this.ensureWeeklyActivity();
     });
   }
 
@@ -95,7 +114,8 @@ export class DashboardApp {
       ${renderSidebar(state.activePage, state.currentUser)}
       <main class="main">${this.renderCurrentPage()}</main>
     </div>
-    <div id="modal-root">${renderModals(state)}</div>`;
+    <div id="modal-root">${renderModals(state)}</div>
+    <div id="rose-root">${renderRoseFab(state)}</div>`;
   }
 
   private renderView(): void {
@@ -112,6 +132,7 @@ export class DashboardApp {
     this.syncSidebarActiveState();
     main.innerHTML = this.renderCurrentPage();
     modalRoot.innerHTML = renderModals(state);
+    this.renderRoseOnly();
   }
 
   private renderMainOnly(): void {
@@ -122,6 +143,7 @@ export class DashboardApp {
     }
     this.syncSidebarActiveState();
     main.innerHTML = this.renderCurrentPage();
+    this.renderRoseOnly();
   }
 
   private renderModalsOnly(): void {
@@ -131,6 +153,22 @@ export class DashboardApp {
       return;
     }
     modalRoot.innerHTML = renderModals(state);
+  }
+
+  private renderRoseOnly(focusInput = false): void {
+    const roseRoot = document.getElementById('rose-root');
+    if (!roseRoot) return;
+    roseRoot.innerHTML = renderRoseFab(state);
+    const messages = document.getElementById('rose-messages');
+    if (messages) messages.scrollTop = messages.scrollHeight;
+    if (focusInput) {
+      const input = document.getElementById('rose-input') as HTMLTextAreaElement | null;
+      if (input) {
+        input.focus();
+        input.selectionStart = input.value.length;
+        input.selectionEnd = input.value.length;
+      }
+    }
   }
 
   private syncSidebarActiveState(): void {
@@ -178,6 +216,11 @@ export class DashboardApp {
       if (target.id === 'qotd-draft') {
         state.qotdDraft = (target as HTMLTextAreaElement).value;
       }
+      if (target.id === 'rose-input') {
+        state.roseInput = (target as HTMLTextAreaElement).value;
+        const send = document.querySelector<HTMLButtonElement>('.rose-send');
+        if (send) send.disabled = state.roseBusy || !state.roseInput.trim();
+      }
       if (target instanceof HTMLInputElement && target.classList.contains('doc-rename-input')) {
         const index = Number(target.dataset.docIndex || -1);
         if (index >= 0) state.docFileNames[index] = target.value;
@@ -192,10 +235,20 @@ export class DashboardApp {
     }, true);
 
     document.addEventListener('keydown', event => {
+      const target = event.target as HTMLElement;
+      if (target.id === 'rose-input' && event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        void this.sendRose();
+        return;
+      }
       if (event.key === 'Escape') {
         document.querySelectorAll('.modal-backdrop.open').forEach(modal => closeModal(modal.id));
         this.lightbox.close();
         this.closeFunViewer();
+        if (state.rosePanelOpen) {
+          state.rosePanelOpen = false;
+          this.renderRoseOnly();
+        }
       }
     });
 
@@ -299,6 +352,37 @@ export class DashboardApp {
         break;
       case 'save-qotd':
         await this.saveQotd();
+        break;
+      case 'toggle-rose':
+        state.rosePanelOpen = !state.rosePanelOpen;
+        state.roseError = '';
+        this.renderRoseOnly(state.rosePanelOpen);
+        break;
+      case 'close-rose':
+        state.rosePanelOpen = false;
+        this.renderRoseOnly();
+        break;
+      case 'clear-rose':
+        state.roseConvo = [];
+        state.roseInput = '';
+        state.roseError = '';
+        this.renderRoseOnly(true);
+        break;
+      case 'rose-quick':
+        state.roseInput = target.dataset.prompt || '';
+        state.rosePanelOpen = true;
+        state.roseError = '';
+        this.renderRoseOnly(true);
+        break;
+      case 'send-rose':
+        await this.sendRose();
+        break;
+      case 'dismiss-rose-greeting':
+        state.roseGreetingDismissed = true;
+        this.renderMainOnly();
+        break;
+      case 'love-weekly':
+        await this.loveWeeklyActivity();
         break;
       case 'qotd-score-view':
         state.qotdScoreView = (target.dataset.view as typeof state.qotdScoreView) || 'week';
@@ -502,6 +586,7 @@ export class DashboardApp {
   }
 
   private preparePage(page: PageId): void {
+    if (page === 'us') void this.markTodayQotdSeen();
     if (page !== 'documents') return;
     state.driveDocs = loadCachedDriveDocs(state.driveOwner);
     state.driveConnected = isDriveConnected() || wasDriveConnected();
@@ -567,6 +652,7 @@ export class DashboardApp {
       subscribeQotd(days => {
         state.qotdDays = days;
         saveCachedList('qotd', state.qotdDays);
+        if (state.activePage === 'us') void this.markTodayQotdSeen();
         this.renderActiveDataPage('us');
       }, error => this.showDataError('Us questions', error)),
       subscribeList('funPacks', packs => {
@@ -1340,7 +1426,7 @@ export class DashboardApp {
     if (!text) return this.toast.show('write your answer first', 'err');
     const dateKey = localDateKey();
     const existing = state.qotdDays.find(day => day.date === dateKey);
-    if (existing?.[role]) return this.toast.show('your answer is already locked for today', 'err');
+    if (hasQotdAnswer(existing?.[role])) return this.toast.show('your answer is already locked for today', 'err');
     const picked = questionForDate(dateKey);
     const question = existing?.q || picked.q;
     const category = existing?.category || picked.category;
@@ -1358,7 +1444,7 @@ export class DashboardApp {
     const role = state.currentUser?.role;
     if (!role) return this.toast.show('sign in first', 'err');
     const day = state.qotdDays.find(item => item.date === dateKey);
-    if (!day?.me || !day.her) return this.toast.show('both answers need to be saved first', 'err');
+    if (!day || !hasQotdAnswer(day.me) || !hasQotdAnswer(day.her)) return this.toast.show('both answers need to be saved first', 'err');
     try {
       await voteQotd(dateKey, role, next);
       this.toast.show(next ? '+2 vote saved' : 'vote removed', 'ok');
@@ -1384,6 +1470,106 @@ export class DashboardApp {
 
   private txnTypeForKind(kind: FinanceKind): Transaction['type'] {
     return kind === 'spending' || kind === 'subway_expense' ? 'out' : 'in';
+  }
+
+  private resetRoseSession(): void {
+    const display = state.currentUser?.display || 'there';
+    state.weeklyActivity = null;
+    state.rosePanelOpen = false;
+    state.roseConvo = [];
+    state.roseInput = '';
+    state.roseBusy = false;
+    state.roseError = '';
+    state.roseGreeting = `hi ${display.toLowerCase()}. good to see you. 🌹`;
+    state.roseGreetingDismissed = false;
+  }
+
+  private async markTodayQotdSeen(): Promise<void> {
+    const role = state.currentUser?.role;
+    if (!role) return;
+    const dateKey = localDateKey();
+    const existing = state.qotdDays.find(day => day.date === dateKey);
+    if (existing?.[role]?.seenAt) return;
+    const picked = questionForDate(dateKey);
+    try {
+      await markQotdSeen(dateKey, role, existing?.q || picked.q, existing?.category || picked.category);
+    } catch (error) {
+      console.warn('Could not mark Us question as seen', error);
+    }
+  }
+
+  private async loadRoseGreeting(): Promise<void> {
+    const user = state.currentUser;
+    if (!user) return;
+    try {
+      const text = await roseGreeting(user.display, user.role);
+      if (text.trim()) {
+        state.roseGreeting = text.trim();
+        if (state.activePage === 'home') this.renderMainOnly();
+      }
+    } catch (error) {
+      console.warn('Rose greeting unavailable', error);
+    }
+  }
+
+  private async ensureWeeklyActivity(): Promise<void> {
+    const weekKey = weekKeyForDate();
+    try {
+      const existing = await getWeekly(weekKey);
+      if (existing) {
+        state.weeklyActivity = existing;
+      } else if (isSunday()) {
+        const suggestion = await roseWeekly();
+        await saveWeekly(weekKey, suggestion);
+        state.weeklyActivity = {
+          weekKey,
+          suggestion,
+          createdAt: new Date().toISOString(),
+          seenBy: { me: false, her: false }
+        };
+      }
+      if (state.activePage === 'home') this.renderMainOnly();
+    } catch (error) {
+      console.warn('Rose weekly activity unavailable', error);
+    }
+  }
+
+  private async loveWeeklyActivity(): Promise<void> {
+    const role = state.currentUser?.role;
+    const week = state.weeklyActivity;
+    if (!role || !week) return;
+    try {
+      await markWeeklySeen(week.weekKey, role);
+      state.weeklyActivity = {
+        ...week,
+        seenBy: { ...(week.seenBy || {}), [role]: true }
+      };
+      this.renderMainOnly();
+    } catch (error) {
+      console.error('Could not mark Rose weekly activity seen', error);
+      this.toast.show('Rose activity did not save', 'err');
+    }
+  }
+
+  private async sendRose(): Promise<void> {
+    const text = state.roseInput.trim();
+    if (!text || state.roseBusy) return;
+    state.roseConvo = [...state.roseConvo, { role: 'user', content: text }];
+    state.roseInput = '';
+    state.roseBusy = true;
+    state.roseError = '';
+    state.rosePanelOpen = true;
+    this.renderRoseOnly();
+    try {
+      const reply = await roseChat(state.roseConvo, state.activePage);
+      state.roseConvo = [...state.roseConvo, { role: 'assistant', content: reply }];
+    } catch (error) {
+      console.error('Rose chat failed', error);
+      state.roseError = error instanceof Error ? error.message : 'rose is unavailable right now';
+    } finally {
+      state.roseBusy = false;
+      this.renderRoseOnly(true);
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 import type { AppState } from '../state/appState';
 import type { FinanceKind, Transaction } from '../types/models';
+import { renderRoseLogo } from '../components/RoseLogo';
 import { renderRoseGreeting } from '../components/RoseGreeting';
 import { currency, greetingTime } from '../utils/format';
 import { localDateKey, questionForDate } from '../data/qotdQuestions';
@@ -133,7 +134,7 @@ function renderWeeklyActivity(state: AppState): string {
   const role = state.currentUser?.role || 'me';
   const seen = Boolean(week.seenBy?.[role]);
   return `<div class="weekly-tile">
-    <div class="weekly-rose">🌹</div>
+    <div class="weekly-rose">${renderRoseLogo()}</div>
     <div>
       <span>this week from Rose</span>
       <p>${week.suggestion}</p>

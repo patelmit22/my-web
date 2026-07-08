@@ -1,5 +1,6 @@
 import type { AppState } from '../state/appState';
 import type { PageId, RoseMessage, Transaction, WorkTask } from '../types/models';
+import { renderRoseLogo } from './RoseLogo';
 import { localDateKey, questionForDate } from '../data/qotdQuestions';
 import { esc } from '../utils/sanitize';
 
@@ -14,12 +15,12 @@ export function renderRoseFab(state: AppState): string {
   const panelClass = state.rosePanelOpen ? 'open' : '';
   return `<div class="rose-widget ${panelClass}">
     <button class="rose-fab" data-action="toggle-rose" aria-label="ask Rose">
-      <span>🌹</span>
+      ${renderRoseLogo('rose-logo rose-logo-fab', 'Rose')}
       <em>ask rose</em>
     </button>
     <aside class="rose-panel ${panelClass}" aria-hidden="${state.rosePanelOpen ? 'false' : 'true'}">
       <div class="rose-panel-head">
-        <div><span class="rose-avatar">🌹</span><strong>Rose</strong></div>
+        <div><span class="rose-avatar">${renderRoseLogo()}</span><strong>Rose</strong></div>
         <div class="rose-head-actions">
           <button data-action="clear-rose">clear</button>
           <button data-action="close-rose" aria-label="close Rose">×</button>
@@ -44,14 +45,14 @@ export function renderRoseFab(state: AppState): string {
 function renderRoseMessage(message: RoseMessage): string {
   const mine = message.role === 'user';
   return `<div class="rose-msg ${mine ? 'user' : 'assistant'}">
-    ${mine ? '' : '<span class="rose-msg-avatar">🌹</span>'}
+    ${mine ? '' : `<span class="rose-msg-avatar">${renderRoseLogo()}</span>`}
     <p>${esc(message.content)}</p>
   </div>`;
 }
 
 function renderEmptyRose(): string {
   return `<div class="rose-empty">
-    <span>🌹</span>
+    <span class="rose-empty-mark">${renderRoseLogo('rose-logo rose-logo-empty')}</span>
     <p>i'm here when you want a little help, a soft idea, or a better sentence.</p>
   </div>`;
 }

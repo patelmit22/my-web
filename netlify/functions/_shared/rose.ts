@@ -31,6 +31,7 @@ Never suggest self-harm coping via physical discomfort. If they seem in serious 
 gently offer real human support as an option.`;
 
 const MODEL = 'claude-haiku-4-5';
+const ANTHROPIC_KEY_PREFIX = ['sk', 'ant'].join('-') + '-';
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -40,9 +41,9 @@ export function jsonResponse(body: unknown, status = 200): Response {
 }
 
 export async function roseText(messages: RoseApiMessage[], maxTokens = 800): Promise<string> {
-  const apiKey = getEnv('ANTHROPIC_API_KEY');
+  const apiKey = getAnthropicKey();
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not set in Netlify environment variables.');
+    throw new Error('Rose needs an Anthropic API key in Netlify. Add ANTHROPIC_API_KEY, then redeploy.');
   }
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -65,7 +66,7 @@ export async function roseText(messages: RoseApiMessage[], maxTokens = 800): Pro
 
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(raw || `Rose request failed with ${response.status}`);
+    throw new Error(readRoseError(raw, response.status));
   }
 
   const data = JSON.parse(raw) as { content?: Array<{ type?: string; text?: string }> };
@@ -74,12 +75,50 @@ export async function roseText(messages: RoseApiMessage[], maxTokens = 800): Pro
   return text;
 }
 
+function getAnthropicKey(): string | undefined {
+  const raw = getEnv('ANTHROPIC_API_KEY') || getEnv('MIT_PATEL_OP');
+  if (!raw) return undefined;
+
+  const cleaned = cleanApiKey(raw);
+  if (!cleaned.startsWith(ANTHROPIC_KEY_PREFIX)) {
+    throw new Error('Rose has the wrong key saved in Netlify. Use a valid Anthropic API key.');
+  }
+  return cleaned;
+}
+
+function cleanApiKey(value: string): string {
+  return value
+    .trim()
+    .replace(/^ANTHROPIC_API_KEY\s*=\s*/i, '')
+    .replace(/^MIT_PATEL_OP\s*=\s*/i, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+}
+
+function readRoseError(raw: string, status: number): string {
+  try {
+    const parsed = JSON.parse(raw) as { error?: { type?: string; message?: string } };
+    const type = parsed.error?.type || '';
+    const message = parsed.error?.message || '';
+    if (type === 'authentication_error' || message.toLowerCase().includes('x-api-key')) {
+      return 'Rose key is invalid in Netlify. Replace ANTHROPIC_API_KEY with a fresh Anthropic key, then redeploy.';
+    }
+    if (type === 'permission_error') {
+      return 'Rose is connected, but this Anthropic key does not have permission for the selected model.';
+    }
+    if (message) return `Rose request failed: ${message}`;
+  } catch {
+    // Keep the browser error friendly even if the API sends plain text.
+  }
+  return `Rose request failed with ${status}.`;
+}
+
 function getEnv(name: string): string | undefined {
   try {
     const value = Netlify?.env?.get(name);
-    if (value) return value;
+    if (value) return value.trim();
   } catch {
     // Local development fallback only.
   }
-  return (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name];
+  return (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name]?.trim();
 }

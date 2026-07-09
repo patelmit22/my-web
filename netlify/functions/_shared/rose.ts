@@ -41,9 +41,9 @@ export function jsonResponse(body: unknown, status = 200): Response {
 }
 
 export async function roseText(messages: RoseApiMessage[], maxTokens = 800): Promise<string> {
-  const apiKey = getAnthropicKey();
+  const apiKey = getRoseKey();
   if (!apiKey) {
-    throw new Error('Rose needs an Anthropic API key in Netlify. Add ANTHROPIC_API_KEY, then redeploy.');
+    throw new Error('Rose needs the MIT_PATEL_OP key in Netlify. Add it, then redeploy.');
   }
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -75,13 +75,13 @@ export async function roseText(messages: RoseApiMessage[], maxTokens = 800): Pro
   return text;
 }
 
-function getAnthropicKey(): string | undefined {
-  const raw = getEnv('ANTHROPIC_API_KEY') || getEnv('MIT_PATEL_OP');
+function getRoseKey(): string | undefined {
+  const raw = getEnv('MIT_PATEL_OP');
   if (!raw) return undefined;
 
   const cleaned = cleanApiKey(raw);
   if (!cleaned.startsWith(ANTHROPIC_KEY_PREFIX)) {
-    throw new Error('Rose has the wrong key saved in Netlify. Use a valid Anthropic API key.');
+    throw new Error('Rose has the wrong MIT_PATEL_OP key saved in Netlify. Use a valid Claude API key.');
   }
   return cleaned;
 }
@@ -89,7 +89,6 @@ function getAnthropicKey(): string | undefined {
 function cleanApiKey(value: string): string {
   return value
     .trim()
-    .replace(/^ANTHROPIC_API_KEY\s*=\s*/i, '')
     .replace(/^MIT_PATEL_OP\s*=\s*/i, '')
     .replace(/^["']|["']$/g, '')
     .trim();
@@ -101,7 +100,7 @@ function readRoseError(raw: string, status: number): string {
     const type = parsed.error?.type || '';
     const message = parsed.error?.message || '';
     if (type === 'authentication_error' || message.toLowerCase().includes('x-api-key')) {
-      return 'Rose key is invalid in Netlify. Replace ANTHROPIC_API_KEY with a fresh Anthropic key, then redeploy.';
+      return 'Rose key is invalid in Netlify. Replace MIT_PATEL_OP with a fresh Claude API key, then redeploy.';
     }
     if (type === 'permission_error') {
       return 'Rose is connected, but this Anthropic key does not have permission for the selected model.';

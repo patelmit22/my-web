@@ -154,4 +154,39 @@ export interface RoseMessage {
   content: string;
 }
 
-export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'us' | 'documents' | 'fun' | 'settings';
+export type WorkoutDayType = 'push' | 'pull' | 'legs' | 'rest';
+
+export interface WorkoutExercise {
+  id: string;
+  name: string;
+  sets: number;
+  reps: string;
+  form: string;
+  image?: string;
+  video?: string;
+  order: number;
+}
+
+export interface WorkoutProgramDay {
+  type: WorkoutDayType;
+  title: string;
+  message?: string;
+  exercises: WorkoutExercise[];
+}
+
+export interface WorkoutSetLog {
+  set: number;
+  weight?: number;
+  reps?: number;
+}
+
+export interface WorkoutSession {
+  date: string;
+  dayType: WorkoutDayType;
+  startedAt: string;
+  finishedAt?: string;
+  completed: Record<string, boolean>;
+  logs: Record<string, WorkoutSetLog[]>;
+}
+
+export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'us' | 'train' | 'documents' | 'fun' | 'settings';

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="exercise">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#7c5cff"/>
+      <stop offset="0.55" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="640" height="420" rx="46" fill="#101427"/>
+  <circle cx="494" cy="86" r="148" fill="url(#bg)" opacity=".16"/>
+  <circle cx="154" cy="326" r="124" fill="url(#bg)" opacity=".1"/>
+  <g filter="url(#glow)" fill="none" stroke="#eef2ff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M155 205h330"/>
+    <path d="M105 150v110M535 150v110"/>
+    <path d="M72 178v54M568 178v54"/>
+  </g>
+  <text x="320" y="310" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="34" font-weight="800" fill="#e5e7eb">TRAIN</text>
+</svg>

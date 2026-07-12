@@ -1,4 +1,4 @@
-import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, PageId, QotdDay, QotdScoreView, RoseMessage, Transaction, WeeklyActivity, WorkTask } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, PageId, QotdDay, QotdScoreView, RoseMessage, Transaction, WeeklyActivity, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from '../types/models';
 import type { MediaPick } from '../utils/media';
 
 export interface AppState {
@@ -49,6 +49,11 @@ export interface AppState {
   txns: Transaction[];
   tasks: WorkTask[];
   games: Game[];
+  workoutProgram: Record<WorkoutDayType, WorkoutProgramDay> | null;
+  workoutSessions: WorkoutSession[];
+  trainSelectedDate: string;
+  trainExpandedLogs: Record<string, boolean>;
+  trainShowOverview: boolean;
 }
 
 export const state: AppState = {
@@ -98,5 +103,10 @@ export const state: AppState = {
   entries: [],
   txns: [],
   tasks: [],
-  games: []
+  games: [],
+  workoutProgram: null,
+  workoutSessions: [],
+  trainSelectedDate: '',
+  trainExpandedLogs: {},
+  trainShowOverview: true
 };

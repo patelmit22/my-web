@@ -244,9 +244,10 @@
 .tile-atlas{--tile-bg:linear-gradient(135deg,#f472b6,#db2777);--tile-glow:rgba(244,114,182,0.3)}
 .tile-games{--tile-bg:linear-gradient(135deg,#7c5cff,#4f46e5);--tile-glow:rgba(124,92,255,0.3)}
 .tile-us{--tile-bg:linear-gradient(135deg,#fb7185,#a855f7);--tile-glow:rgba(251,113,133,0.3)}
+.tile-train{--tile-bg:linear-gradient(135deg,#f97316,#eab308);--tile-glow:rgba(249,115,22,0.28)}
 .tile-documents{--tile-bg:linear-gradient(135deg,#f59e0b,#ef4444);--tile-glow:rgba(245,158,11,0.25)}
 .tile-fun{--tile-bg:linear-gradient(135deg,#fb7185,#f97316);--tile-glow:rgba(251,113,133,0.25)}
-.tile-finance,.tile-work,.tile-atlas,.tile-games,.tile-us,.tile-documents,.tile-fun{
+.tile-finance,.tile-work,.tile-atlas,.tile-games,.tile-us,.tile-train,.tile-documents,.tile-fun{
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 18px 60px rgba(0,0,0,0.18);
 }
 
@@ -1066,6 +1067,295 @@
 .m-more{position:absolute;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-ui);font-weight:700;font-size:1.3rem}
 
 
+/* ---------- TRAIN ---------- */
+.train-head{
+  align-items:center;
+}
+.train-week{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  gap:0.55rem;
+  margin:1.2rem 0;
+}
+.train-day-chip{
+  border:1px solid var(--glass-border);
+  border-radius:16px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018));
+  color:var(--ink-mute);
+  padding:0.8rem 0.55rem;
+  cursor:pointer;
+  text-align:left;
+  transition:transform 0.2s,border-color 0.2s,background 0.2s;
+}
+.train-day-chip:hover{
+  transform:translateY(-2px);
+  border-color:rgba(249,115,22,0.42);
+}
+.train-day-chip span,
+.train-day-chip small{
+  display:block;
+  font-family:var(--font-mono);
+  font-size:0.66rem;
+}
+.train-day-chip strong{
+  display:block;
+  color:var(--ink);
+  font-family:var(--font-ui);
+  font-size:0.92rem;
+  margin:0.26rem 0;
+  text-transform:capitalize;
+}
+.train-day-chip.today{
+  border-color:rgba(34,211,238,0.4);
+}
+.train-day-chip.active{
+  color:var(--ink);
+  border-color:rgba(249,115,22,0.7);
+  background:radial-gradient(circle at top right,rgba(249,115,22,0.24),transparent 45%),linear-gradient(135deg,rgba(124,92,255,0.22),rgba(249,115,22,0.12));
+  box-shadow:0 18px 50px rgba(249,115,22,0.14);
+}
+.train-panel{
+  border:1px solid var(--glass-border);
+  border-radius:24px;
+  padding:1.25rem;
+  background:radial-gradient(circle at 8% 0,rgba(249,115,22,0.14),transparent 34%),linear-gradient(145deg,rgba(255,255,255,0.04),rgba(255,255,255,0.014));
+}
+.train-panel-top{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:1rem;
+  align-items:start;
+}
+.train-panel-top span{
+  color:#fed7aa;
+  font-family:var(--font-mono);
+  font-size:0.74rem;
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+}
+.train-panel-top h2{
+  font-family:var(--font-ui);
+  font-size:clamp(1.55rem,3vw,2.35rem);
+  margin:0.25rem 0;
+}
+.train-panel-top p{
+  color:var(--ink-dim);
+  line-height:1.55;
+}
+.train-score{
+  min-width:118px;
+  border:1px solid rgba(249,115,22,0.28);
+  border-radius:18px;
+  padding:0.9rem;
+  text-align:center;
+  background:rgba(249,115,22,0.08);
+}
+.train-score strong{
+  display:block;
+  font-family:var(--font-ui);
+  font-size:1.55rem;
+}
+.train-score span{
+  color:var(--ink-mute);
+  font-family:var(--font-mono);
+  font-size:0.68rem;
+}
+.train-progress-track{
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.08);
+  overflow:hidden;
+  margin:1rem 0;
+}
+.train-progress-track>div{
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#f97316,#eab308,#22c55e);
+  transition:width 0.25s;
+}
+.train-overview-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:0.75rem;
+  margin-bottom:1rem;
+}
+.train-overview-card{
+  border:1px solid var(--glass-border);
+  border-radius:16px;
+  padding:0.85rem;
+  background:rgba(255,255,255,0.035);
+}
+.train-overview-card span{
+  display:block;
+  color:#fbbf24;
+  font-family:var(--font-mono);
+  font-size:0.65rem;
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+}
+.train-overview-card strong{
+  display:block;
+  margin:0.25rem 0;
+  font-family:var(--font-ui);
+  font-size:0.98rem;
+}
+.train-overview-card small{
+  color:var(--ink-mute);
+  line-height:1.45;
+}
+.train-exercise-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:1rem;
+}
+.train-exercise-card{
+  position:relative;
+  overflow:hidden;
+  border:1px solid var(--glass-border);
+  border-radius:20px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018));
+}
+.train-exercise-card.done{
+  opacity:0.72;
+  border-color:rgba(34,197,94,0.34);
+}
+.train-done-mark{
+  display:none;
+  position:absolute;
+  top:0.75rem;
+  right:0.75rem;
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  align-items:center;
+  justify-content:center;
+  color:#bbf7d0;
+  background:rgba(22,163,74,0.28);
+  border:1px solid rgba(34,197,94,0.5);
+  z-index:2;
+  font-weight:900;
+}
+.train-exercise-card.done .train-done-mark{
+  display:flex;
+}
+.train-ex-media{
+  width:100%;
+  aspect-ratio:16/9;
+  object-fit:cover;
+  display:block;
+  background:#050711;
+}
+.train-ex-body{
+  padding:1rem;
+}
+.train-ex-top{
+  display:flex;
+  justify-content:space-between;
+  gap:0.75rem;
+  align-items:flex-start;
+}
+.train-ex-meta{
+  display:block;
+  color:#fed7aa;
+  font-family:var(--font-mono);
+  font-size:0.68rem;
+  margin-bottom:0.2rem;
+}
+.train-ex-body h3{
+  font-family:var(--font-ui);
+  font-size:1.1rem;
+  line-height:1.25;
+}
+.train-ex-body p{
+  color:var(--ink-dim);
+  font-size:0.86rem;
+  line-height:1.55;
+  margin:0.75rem 0;
+}
+.train-complete,
+.train-log-toggle{
+  border:1px solid var(--glass-border);
+  border-radius:999px;
+  color:var(--ink);
+  background:rgba(255,255,255,0.045);
+  padding:0.45rem 0.7rem;
+  font-family:var(--font-ui);
+  font-weight:800;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.train-complete.is-done{
+  color:#86efac;
+  border-color:rgba(34,197,94,0.45);
+  background:rgba(34,197,94,0.12);
+}
+.train-log-toggle{
+  width:100%;
+  margin-top:0.35rem;
+}
+.train-log{
+  border-top:1px solid rgba(255,255,255,0.08);
+  margin-top:0.85rem;
+  padding-top:0.85rem;
+}
+.train-log-head,
+.train-set-row{
+  display:grid;
+  grid-template-columns:48px 1fr 1fr;
+  gap:0.55rem;
+  align-items:center;
+}
+.train-log-head{
+  color:var(--ink-mute);
+  font-family:var(--font-mono);
+  font-size:0.66rem;
+  margin-bottom:0.45rem;
+}
+.train-set-row{
+  margin-bottom:0.45rem;
+}
+.train-set-row span{
+  color:#fed7aa;
+  font-family:var(--font-mono);
+}
+.train-set-row input{
+  min-width:0;
+  width:100%;
+  border:1px solid var(--glass-border);
+  border-radius:12px;
+  background:rgba(0,0,0,0.28);
+  color:var(--ink);
+  padding:0.55rem 0.65rem;
+  font:inherit;
+}
+.train-finish{
+  width:100%;
+  margin-top:1rem;
+  border:0;
+  border-radius:16px;
+  padding:0.95rem 1rem;
+  background:linear-gradient(135deg,#f97316,#7c5cff);
+  color:white;
+  font-family:var(--font-ui);
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 16px 46px rgba(249,115,22,0.18);
+}
+.train-finish:disabled{
+  opacity:0.45;
+  cursor:not-allowed;
+}
+.train-rest-card{
+  border:1px dashed rgba(249,115,22,0.36);
+  border-radius:18px;
+  color:#fed7aa;
+  background:rgba(249,115,22,0.08);
+  padding:1.4rem;
+  text-align:center;
+  font-family:var(--font-ui);
+}
+
+
 /* ---------- PHONE LAYOUT OVERRIDES ----------
    This file loads after layout.css, so mobile page rules live here to win
    over desktop grid definitions above. */
@@ -1345,6 +1635,17 @@
   .game-cover{
     aspect-ratio:16/10;
   }
+  .train-week{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .train-panel-top,
+  .train-overview-grid,
+  .train-exercise-grid{
+    grid-template-columns:1fr;
+  }
+  .train-score{
+    text-align:left;
+  }
 }
 
 @media (max-width:520px){
@@ -1481,5 +1782,26 @@
   .atlas-filter .gtab{
     flex:1 1 calc(50% - 0.35rem);
     text-align:center;
+  }
+  .train-week{
+    grid-template-columns:1fr 1fr;
+    gap:0.45rem;
+  }
+  .train-day-chip{
+    padding:0.7rem;
+    border-radius:14px;
+  }
+  .train-panel{
+    padding:0.9rem;
+    border-radius:18px;
+  }
+  .train-log-head{
+    display:none;
+  }
+  .train-set-row{
+    grid-template-columns:1fr 1fr;
+  }
+  .train-set-row span{
+    grid-column:1/-1;
   }
 }

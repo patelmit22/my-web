@@ -26,6 +26,7 @@ import {
   voteQotd
 } from './api/databaseApi';
 import { roseChat, roseGreeting, roseWeekly } from './api/rose';
+import { ensureWorkoutProgramSeeded, saveWorkoutSession, subscribeWorkoutProgram, subscribeWorkoutSessions } from './api/workoutApi';
 import { renderSidebar } from './components/Sidebar';
 import { Lightbox } from './components/Lightbox';
 import { openModal, closeModal } from './components/Modal';
@@ -36,11 +37,12 @@ import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriv
 import { deleteStorageFile, getStorageFileUrl, uploadFunMedia } from './api/storageApi';
 import { localDateKey, questionForDate } from './data/qotdQuestions';
 import { state } from './state/appState';
-import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask } from './types/models';
+import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from './types/models';
 import { checked, formValue, qs } from './utils/dom';
 import { compressImageFile, fileToPick, releasePicks, serializeMedia, type MediaPick } from './utils/media';
 import { isSunday, weekKeyForDate } from './utils/qotdDates';
 import { hasQotdAnswer } from './utils/qotdScore';
+import { dateFromSessionKey, dayTypeFor, sessionKey } from './utils/workoutSchedule';
 import {
   filteredEntries,
   renderAtlasPage,
@@ -55,6 +57,7 @@ import {
   renderHomePage,
   renderMediaPreviews,
   renderSettingsPage,
+  renderTrainPage,
   renderUsPage,
   renderWorkMediaPreviews,
   renderWorkPage,
@@ -96,6 +99,9 @@ export class DashboardApp {
       this.renderApp();
       this.replaceHistory('home');
       this.subscribeToData();
+      if (state.currentUser.role === 'me') {
+        void ensureWorkoutProgramSeeded().catch(error => this.showDataError('Train program', error));
+      }
       void this.loadRoseGreeting();
       void this.ensureWeeklyActivity();
     });
@@ -184,6 +190,7 @@ export class DashboardApp {
       case 'atlas': return renderAtlasPage(state);
       case 'games': return renderGamesPage(state);
       case 'us': return renderUsPage(state);
+      case 'train': return renderTrainPage(state);
       case 'documents': return renderDocumentsPage(state);
       case 'fun': return renderFunPage(state);
       case 'settings': return renderSettingsPage(state);
@@ -224,6 +231,13 @@ export class DashboardApp {
       if (target instanceof HTMLInputElement && target.classList.contains('doc-rename-input')) {
         const index = Number(target.dataset.docIndex || -1);
         if (index >= 0) state.docFileNames[index] = target.value;
+      }
+    });
+
+    document.addEventListener('focusout', event => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement && target.dataset.trainLog === 'true') {
+        void this.saveTrainLogInput(target);
       }
     });
 
@@ -390,6 +404,27 @@ export class DashboardApp {
         break;
       case 'vote-qotd':
         await this.voteQotd(target.dataset.date || localDateKey(), target.dataset.next === 'true');
+        break;
+      case 'train-pick-day':
+        state.trainSelectedDate = target.dataset.date || sessionKey();
+        this.renderMainOnly();
+        break;
+      case 'train-toggle-overview':
+        state.trainShowOverview = !state.trainShowOverview;
+        this.renderMainOnly();
+        break;
+      case 'train-open-log': {
+        const id = target.dataset.id || '';
+        const key = this.trainExerciseKey(id);
+        state.trainExpandedLogs[key] = !state.trainExpandedLogs[key];
+        this.renderMainOnly();
+        break;
+      }
+      case 'train-toggle-complete':
+        await this.toggleTrainComplete(target.dataset.id || '');
+        break;
+      case 'train-finish-session':
+        await this.finishTrainSession();
         break;
       case 'connect-drive':
         await this.connectDriveAndLoad();
@@ -575,17 +610,24 @@ export class DashboardApp {
     }
   }
 
+  private resolveAllowedPage(page: PageId): PageId {
+    if ((page === 'settings' || page === 'train') && state.currentUser?.role !== 'me') return 'home';
+    return page;
+  }
+
   private navigate(page: PageId, pushHistory = true): void {
+    const nextPage = this.resolveAllowedPage(page);
     const oldPage = state.activePage;
-    state.activePage = page;
-    if (pushHistory && oldPage !== page) this.pushHistory(page);
-    this.preparePage(page);
+    state.activePage = nextPage;
+    if (pushHistory && oldPage !== nextPage) this.pushHistory(nextPage);
+    this.preparePage(nextPage);
     this.renderView();
-    if (page === 'documents') void this.maybeAutoLoadDriveDocs();
+    if (nextPage === 'documents') void this.maybeAutoLoadDriveDocs();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   private preparePage(page: PageId): void {
+    if (page === 'train' && !state.trainSelectedDate) state.trainSelectedDate = sessionKey();
     if (page === 'us') void this.markTodayQotdSeen();
     if (page !== 'documents') return;
     state.driveDocs = loadCachedDriveDocs(state.driveOwner);
@@ -604,7 +646,7 @@ export class DashboardApp {
 
   private replaceHistory(page: PageId): void {
     const pageFromHash = this.pageFromHash();
-    const resolvedPage = pageFromHash || page;
+    const resolvedPage = this.resolveAllowedPage(pageFromHash || page);
     state.activePage = resolvedPage;
     this.preparePage(resolvedPage);
     if (resolvedPage === 'home') {
@@ -619,7 +661,7 @@ export class DashboardApp {
 
   private pageFromHash(): PageId | null {
     const page = window.location.hash.replace('#', '') as PageId;
-    return ['home', 'finance', 'work', 'atlas', 'games', 'us', 'documents', 'fun', 'settings'].includes(page) ? page : null;
+    return ['home', 'finance', 'work', 'atlas', 'games', 'us', 'train', 'documents', 'fun', 'settings'].includes(page) ? page : null;
   }
 
   private subscribeToData(): void {
@@ -661,6 +703,20 @@ export class DashboardApp {
         this.renderActiveDataPage('fun');
       }, error => this.showDataError('Fun vault', error))
     );
+    if (state.currentUser?.role === 'me') {
+      this.unsubs.push(
+        subscribeWorkoutProgram(program => {
+          state.workoutProgram = program;
+          saveCachedValue('workoutProgram', program);
+          this.renderActiveDataPage('train');
+        }, error => this.showDataError('Train program', error)),
+        subscribeWorkoutSessions(sessions => {
+          state.workoutSessions = sessions;
+          saveCachedValue('workoutSessions', sessions);
+          this.renderActiveDataPage('train');
+        }, error => this.showDataError('Train sessions', error))
+      );
+    }
   }
 
   private disposeDataSubscriptions(): void {
@@ -678,6 +734,11 @@ export class DashboardApp {
     state.games = loadCachedList('games');
     state.qotdDays = loadCachedList('qotd').sort((a, b) => b.date.localeCompare(a.date));
     state.funPacks = loadCachedList('funPacks').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    state.workoutProgram = loadCachedValue<Record<WorkoutDayType, WorkoutProgramDay> | null>('workoutProgram', null);
+    state.workoutSessions = loadCachedValue<WorkoutSession[]>('workoutSessions', []);
+    state.trainSelectedDate = sessionKey();
+    state.trainExpandedLogs = {};
+    state.trainShowOverview = true;
   }
 
   private showDataError(area: string, error: Error): void {
@@ -1198,6 +1259,108 @@ export class DashboardApp {
     const index = order.indexOf(task.col);
     const nextIndex = Math.max(0, Math.min(order.length - 1, index + dir));
     await updateTaskColumn(id, order[nextIndex]);
+  }
+
+  private trainDateKey(): string {
+    return state.trainSelectedDate || sessionKey();
+  }
+
+  private trainExerciseKey(exerciseId: string): string {
+    return `${this.trainDateKey()}:${exerciseId}`;
+  }
+
+  private getWorkoutSession(dateKey = this.trainDateKey()): WorkoutSession {
+    const existing = state.workoutSessions.find(item => item.date === dateKey);
+    if (existing) {
+      return {
+        ...existing,
+        completed: { ...(existing.completed || {}) },
+        logs: Object.fromEntries(
+          Object.entries(existing.logs || {}).map(([key, value]) => [key, (value || []).map(row => ({ ...row }))])
+        )
+      };
+    }
+    return {
+      date: dateKey,
+      dayType: dayTypeFor(dateFromSessionKey(dateKey)),
+      startedAt: new Date().toISOString(),
+      completed: {},
+      logs: {}
+    };
+  }
+
+  private async upsertWorkoutSession(session: WorkoutSession): Promise<void> {
+    await saveWorkoutSession(session);
+    state.workoutSessions = [
+      session,
+      ...state.workoutSessions.filter(item => item.date !== session.date)
+    ].sort((a, b) => b.date.localeCompare(a.date));
+    saveCachedValue('workoutSessions', state.workoutSessions);
+  }
+
+  private async toggleTrainComplete(exerciseId: string): Promise<void> {
+    if (state.currentUser?.role !== 'me') {
+      this.toast.show('owner only', 'err');
+      return;
+    }
+    if (!exerciseId) return;
+    const session = this.getWorkoutSession();
+    session.completed[exerciseId] = !session.completed[exerciseId];
+    try {
+      await this.upsertWorkoutSession(session);
+      this.renderMainOnly();
+    } catch (error) {
+      console.error('train complete failed', error);
+      this.toast.show(`train did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    }
+  }
+
+  private async saveTrainLogInput(input: HTMLInputElement): Promise<void> {
+    if (state.currentUser?.role !== 'me') return;
+    const exerciseId = input.dataset.id || '';
+    const field = input.dataset.field;
+    const set = Number(input.dataset.set || 0);
+    if (!exerciseId || (field !== 'weight' && field !== 'reps') || !set) return;
+    const session = this.getWorkoutSession();
+    const rows = [...(session.logs[exerciseId] || [])];
+    let row = rows.find(item => item.set === set);
+    if (!row) {
+      row = { set };
+      rows.push(row);
+    }
+    const raw = input.value.trim();
+    if (raw) {
+      const value = Number(raw);
+      if (Number.isFinite(value)) row[field] = value;
+    } else {
+      delete row[field];
+    }
+    session.logs[exerciseId] = rows
+      .filter(item => item.weight !== undefined || item.reps !== undefined)
+      .sort((a, b) => a.set - b.set);
+    try {
+      await this.upsertWorkoutSession(session);
+    } catch (error) {
+      console.error('train log save failed', error);
+      this.toast.show(`set log did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    }
+  }
+
+  private async finishTrainSession(): Promise<void> {
+    if (state.currentUser?.role !== 'me') {
+      this.toast.show('owner only', 'err');
+      return;
+    }
+    const session = this.getWorkoutSession();
+    session.finishedAt = new Date().toISOString();
+    try {
+      await this.upsertWorkoutSession(session);
+      this.renderMainOnly();
+      this.toast.show('great job', 'ok');
+    } catch (error) {
+      console.error('train finish failed', error);
+      this.toast.show(`session did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    }
   }
 
   private resetEntryModal(): void {
@@ -1821,6 +1984,23 @@ function loadCachedList<TPath extends DataPath>(path: TPath): DataMap[TPath][] {
     return JSON.parse(localStorage.getItem(`mitpatel_cache_${path}_v1`) || '[]') as DataMap[TPath][];
   } catch {
     return [];
+  }
+}
+
+function saveCachedValue<T>(key: string, value: T): void {
+  try {
+    localStorage.setItem(`mitpatel_cache_${key}_v1`, JSON.stringify(value));
+  } catch {
+    // Cache is only a display fallback; Firebase remains the source of truth.
+  }
+}
+
+function loadCachedValue<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(`mitpatel_cache_${key}_v1`);
+    return raw ? JSON.parse(raw) as T : fallback;
+  } catch {
+    return fallback;
   }
 }
 

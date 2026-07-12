@@ -5,6 +5,8 @@ import { renderRoseGreeting } from '../components/RoseGreeting';
 import { currency, greetingTime } from '../utils/format';
 import { localDateKey, questionForDate } from '../data/qotdQuestions';
 import { hasQotdAnswer } from '../utils/qotdScore';
+import { DEFAULT_WORKOUT_PROGRAM } from '../data/workoutProgram';
+import { dateFromSessionKey, dayTypeFor, sessionKey } from '../utils/workoutSchedule';
 
 function kindOf(txn: Transaction): FinanceKind {
   return txn.kind || (txn.type === 'out' ? 'spending' : 'general');
@@ -40,6 +42,13 @@ export function renderHomePage(state: AppState): string {
   const todayUs = state.qotdDays.find(day => day.date === todayKey);
   const usAnswered = Boolean(todayUs && hasQotdAnswer(todayUs.me) && hasQotdAnswer(todayUs.her));
   const usQuestion = todayUs?.q || questionForDate(todayKey).q;
+  const workoutDateKey = sessionKey();
+  const workoutType = dayTypeFor(dateFromSessionKey(workoutDateKey));
+  const workoutDay = (state.workoutProgram || DEFAULT_WORKOUT_PROGRAM)[workoutType];
+  const workoutSession = state.workoutSessions.find(item => item.date === workoutDateKey);
+  const workoutTotal = workoutType === 'rest' ? 0 : (workoutDay.exercises || []).length;
+  const workoutDone = workoutSession ? Object.values(workoutSession.completed || {}).filter(Boolean).length : 0;
+  const workoutStat = workoutType === 'rest' ? 'rest day today' : `${workoutDone}/${workoutTotal} done today`;
   const vibe = monthIn > 0
     ? 'money day'
     : openTasks > 0
@@ -116,6 +125,10 @@ export function renderHomePage(state: AppState): string {
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg></div>
         <div class="tile-name">Us</div><div class="tile-desc">daily question together</div><div class="tile-stat">${usAnswered ? 'revealed today' : usQuestion}</div>
       </button>
+      ${state.currentUser?.role === 'me' ? `<button class="tile tile-train" data-action="nav" data-page="train">
+        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M7 12h10"/></svg></div>
+        <div class="tile-name">Train</div><div class="tile-desc">push, pull, legs</div><div class="tile-stat">${workoutStat}</div>
+      </button>` : ''}
       <button class="tile tile-documents" data-action="nav" data-page="documents">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg></div>
         <div class="tile-name">Documents</div><div class="tile-desc">Google Drive locker</div><div class="tile-stat">${state.driveDocs.length} loaded</div>

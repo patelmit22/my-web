@@ -19,10 +19,10 @@ export function renderGamesPage(state: AppState): string {
   const list = state.gameFilter === 'all' ? state.games : state.games.filter(game => game.status === state.gameFilter);
   return `<section class="page active" id="page-games">
     <div class="page-header"><div><div class="page-title">Games</div><div class="page-sub">your library, your way</div></div><button class="btn-accent" data-action="open-game-modal">+ add game</button></div>
-    ${now ? `<button class="game-now" data-action="open-game-detail" data-id="${esc(now.id)}"><div class="game-now-icon">🎮</div><div class="game-now-text"><div class="game-now-label">currently playing</div><div class="game-now-title">${esc(now.name)}</div><div class="game-now-platform">${esc(now.platform || '')}</div>${now.story ? `<div class="game-now-story">${esc(now.story).slice(0, 140)}${now.story.length > 140 ? '...' : ''}</div>` : ''}</div></button>` : ''}
+    ${now ? `<button class="game-now" id="game-now-tile" data-action="open-game-detail" data-id="${esc(now.id)}"><div class="game-now-icon">🎮</div><div class="game-now-text"><div class="game-now-label">currently playing</div><div class="game-now-title">${esc(now.name)}</div><div class="game-now-platform">${esc(now.platform || '')}</div>${now.story ? `<div class="game-now-story">${esc(now.story).slice(0, 140)}${now.story.length > 140 ? '...' : ''}</div>` : ''}</div></button>` : ''}
     <div class="game-tabs">${filters.map(filter => `<button class="gtab ${state.gameFilter === filter ? 'active' : ''}" data-action="game-filter" data-filter="${filter}">${filter}</button>`).join('')}</div>
-    <div class="games-grid">${list.length ? list.map(game => `<article class="game-card" data-action="open-game-detail" data-id="${esc(game.id)}" tabindex="0">
-      ${renderGameCover(game.cover, game.c1, game.c2, 'game-cover')}
+    <div class="games-grid" id="games-grid">${list.length ? list.map(game => `<article class="game-card" data-action="open-game-detail" data-id="${esc(game.id)}" tabindex="0">
+      ${renderGameCover(game.coverThumb || game.cover, game.c1, game.c2, 'game-cover')}
       <div class="game-name">${esc(game.name)}</div><div class="game-platform">${esc(game.platform || '')}</div>
       ${game.story ? `<div class="game-card-story">${esc(game.story).slice(0, 90)}${game.story.length > 90 ? '...' : ''}</div>` : ''}
       <div class="game-card-meta">${game.media?.length ? `<span>${game.media.length} media</span>` : '<span>open details</span>'}${game.url ? '<span>link</span>' : ''}</div>
@@ -121,7 +121,7 @@ export function renderGameDetailModal(state: AppState): string {
 export function renderGameMediaPreviews(state: AppState): string {
   if (!state.gameMediaPicks.length) return '';
   return state.gameMediaPicks.map((pick, index) => `<div class="preview">
-    ${pick.type === 'video' ? `<video src="${pick.prev}" muted></video>` : `<img src="${pick.prev}" alt="">`}
+    ${pick.type === 'video' ? `<video src="${pick.prev}" muted preload="metadata"></video>` : `<img src="${pick.prev}" alt="" loading="lazy" decoding="async">`}
     <button data-action="remove-game-media" data-index="${index}">×</button>
   </div>`).join('');
 }
@@ -129,7 +129,7 @@ export function renderGameMediaPreviews(state: AppState): string {
 export function renderGameCoverPreview(state: AppState): string {
   if (!state.gameCoverPicks.length) return '';
   return state.gameCoverPicks.map((pick, index) => `<div class="preview">
-    <img src="${pick.prev}" alt="">
+    <img src="${pick.prev}" alt="" loading="lazy" decoding="async">
     <button data-action="remove-game-cover" data-index="${index}">×</button>
   </div>`).join('');
 }
@@ -142,13 +142,13 @@ function renderClipLinks(clips: string[]): string {
 function renderGameCover(cover = '', c1 = '#4338ca', c2 = '#7c3aed', className: 'game-cover' | 'game-detail-cover'): string {
   return `<div class="${className}" style="--g1:${esc(c1)};--g2:${esc(c2)}">
     <span class="game-cover-fallback">🎮</span>
-    ${cover ? `<img class="cover-img" src="${esc(cover)}" alt="game cover" loading="lazy">` : ''}
+    ${cover ? `<img class="cover-img" src="${esc(cover)}" alt="game cover" loading="lazy" decoding="async">` : ''}
   </div>`;
 }
 
 function renderGameMedia(media: AtlasMedia[]): string {
   if (!media.length) return '';
   return `<div class="game-memory-section"><div class="game-memory-label">photos & videos</div><div class="game-detail-media">${media.map(item => `<div class="game-media-item">
-    ${item.type === 'video' ? `<video src="${item.data}" controls playsinline></video>` : `<img src="${item.data}" alt="${esc(item.name || 'game photo')}">`}
+    ${item.type === 'video' ? `<video src="${item.data}" controls playsinline preload="metadata"></video>` : `<img src="${item.data}" alt="${esc(item.name || 'game photo')}" loading="lazy" decoding="async">`}
   </div>`).join('')}</div></div>`;
 }

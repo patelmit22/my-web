@@ -72,8 +72,8 @@ function renderMedia(entry: AtlasEntry): string {
   const cls = media.length === 1 ? 'one' : media.length === 2 ? 'two' : 'many';
   return `<div class="media-grid ${cls}">${shown.map((item, index) => {
     const tag = item.type === 'video'
-      ? `<video src="${item.data}" controls playsinline></video>`
-      : `<img src="${item.data}" loading="lazy" data-action="open-lightbox" data-id="${entry.id}" data-index="${index}">`;
+      ? `<video src="${item.data}" controls playsinline preload="metadata"></video>`
+      : `<img src="${item.data}" loading="lazy" decoding="async" data-action="open-lightbox" data-id="${entry.id}" data-index="${index}">`;
     return `<div class="m-item">${tag}${index === 3 && extra > 0 ? `<div class="m-more">+${extra + 1}</div>` : ''}</div>`;
   }).join('')}</div>`;
 }
@@ -97,5 +97,5 @@ export function renderEntryModal(state: AppState): string {
 }
 
 export function renderMediaPreviews(state: AppState): string {
-  return state.mediaPicks.map((pick, index) => `<div class="prev-item">${pick.type === 'video' ? `<video src="${pick.prev}" muted></video>` : `<img src="${pick.prev}">`}<button class="prev-rm" data-action="remove-media" data-index="${index}">×</button></div>`).join('');
+  return state.mediaPicks.map((pick, index) => `<div class="prev-item">${pick.type === 'video' ? `<video src="${pick.prev}" muted preload="metadata"></video>` : `<img src="${pick.prev}" loading="lazy" decoding="async">`}<button class="prev-rm" data-action="remove-media" data-index="${index}">×</button></div>`).join('');
 }

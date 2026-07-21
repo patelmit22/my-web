@@ -2,6 +2,26 @@
 .screen{display:none;min-height:100vh}
 .screen.active{display:block}
 
+.entry,
+.entry-card,
+.game-card,
+.task,
+.task-card,
+.txn,
+.us-past,
+.fun-pack-card{
+  contain:layout paint style;
+}
+
+.games-grid,
+.entries-list,
+.entries-grid,
+.board,
+.txn-list,
+.fun-pack-grid{
+  content-visibility:auto;
+  contain-intrinsic-size:220px 420px;
+}
 
 /* ---------- AUTH SCREEN ---------- */
 #auth-screen{display:none;align-items:center;justify-content:center;padding:2rem;min-height:100vh}

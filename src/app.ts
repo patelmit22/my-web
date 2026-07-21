@@ -38,8 +38,9 @@ import { deleteStorageFile, getStorageFileUrl, uploadFunMedia } from './api/stor
 import { localDateKey, questionForDate } from './data/qotdQuestions';
 import { state } from './state/appState';
 import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from './types/models';
-import { checked, formValue, qs } from './utils/dom';
-import { compressImageFile, fileToPick, releasePicks, serializeMedia, type MediaPick } from './utils/media';
+import { checked, formValue, morphHtml, morphNode, qs } from './utils/dom';
+import { debounce } from './utils/debounce';
+import { compressImageFile, compressImage, fileToPick, releasePicks, serializeMedia, type MediaPick } from './utils/media';
 import { isSunday, weekKeyForDate } from './utils/qotdDates';
 import { hasQotdAnswer } from './utils/qotdScore';
 import { dateFromSessionKey, dayTypeFor, sessionKey } from './utils/workoutSchedule';
@@ -108,7 +109,7 @@ export class DashboardApp {
   }
 
   private renderAuth(): void {
-    this.root.innerHTML = renderAuthPage();
+    morphHtml(this.root, renderAuthPage());
   }
 
   private renderApp(): void {
@@ -116,12 +117,12 @@ export class DashboardApp {
       this.renderAuth();
       return;
     }
-    this.root.innerHTML = `<div id="app-screen" class="screen active">
+    morphHtml(this.root, `<div id="app-screen" class="screen active">
       ${renderSidebar(state.activePage, state.currentUser)}
       <main class="main">${this.renderCurrentPage()}</main>
     </div>
     <div id="modal-root">${renderModals(state)}</div>
-    <div id="rose-root">${renderRoseFab(state)}</div>`;
+    <div id="rose-root">${renderRoseFab(state)}</div>`);
   }
 
   private renderView(): void {
@@ -136,8 +137,8 @@ export class DashboardApp {
       return;
     }
     this.syncSidebarActiveState();
-    main.innerHTML = this.renderCurrentPage();
-    modalRoot.innerHTML = renderModals(state);
+    morphHtml(main, this.renderCurrentPage());
+    morphHtml(modalRoot, renderModals(state));
     this.renderRoseOnly();
   }
 
@@ -148,7 +149,7 @@ export class DashboardApp {
       return;
     }
     this.syncSidebarActiveState();
-    main.innerHTML = this.renderCurrentPage();
+    morphHtml(main, this.renderCurrentPage());
     this.renderRoseOnly();
   }
 
@@ -158,13 +159,13 @@ export class DashboardApp {
       this.renderApp();
       return;
     }
-    modalRoot.innerHTML = renderModals(state);
+    morphHtml(modalRoot, renderModals(state));
   }
 
   private renderRoseOnly(focusInput = false): void {
     const roseRoot = document.getElementById('rose-root');
     if (!roseRoot) return;
-    roseRoot.innerHTML = renderRoseFab(state);
+    morphHtml(roseRoot, renderRoseFab(state));
     const messages = document.getElementById('rose-messages');
     if (messages) messages.scrollTop = messages.scrollHeight;
     if (focusInput) {
@@ -666,41 +667,51 @@ export class DashboardApp {
 
   private subscribeToData(): void {
     this.disposeDataSubscriptions();
+    const rerenderSettings = debounce(() => {
+      if (state.activePage === 'settings') this.renderMainOnly();
+    });
+    const rerenderEntries = debounce(() => this.renderActiveDataPage('atlas'));
+    const rerenderFinance = debounce(() => this.renderActiveDataPage('finance'));
+    const rerenderWork = debounce(() => this.renderActiveDataPage('work'));
+    const rerenderGames = debounce(() => this.renderActiveDataPage('games'));
+    const rerenderUs = debounce(() => this.renderActiveDataPage('us'));
+    const rerenderFun = debounce(() => this.renderActiveDataPage('fun'));
+    const rerenderTrain = debounce(() => this.renderActiveDataPage('train'));
     this.unsubs.push(
       subscribeHerConfig(config => {
         state.herConfig = config;
-        if (state.activePage === 'settings') this.renderMainOnly();
+        rerenderSettings();
       }),
       subscribeList('entries', entries => {
         state.entries = entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         saveCachedList('entries', state.entries);
-        this.renderActiveDataPage('atlas');
+        rerenderEntries();
       }, error => this.showDataError('Atlas entries', error)),
       subscribeList('txns', txns => {
         state.txns = txns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         saveCachedList('txns', state.txns);
-        this.renderActiveDataPage('finance');
+        rerenderFinance();
       }, error => this.showDataError('Finance', error)),
       subscribeList('tasks', tasks => {
         state.tasks = tasks;
         saveCachedList('tasks', state.tasks);
-        this.renderActiveDataPage('work');
+        rerenderWork();
       }, error => this.showDataError('Work board', error)),
       subscribeList('games', games => {
         state.games = games;
         saveCachedList('games', state.games);
-        this.renderActiveDataPage('games');
+        rerenderGames();
       }, error => this.showDataError('Games', error)),
       subscribeQotd(days => {
         state.qotdDays = days;
         saveCachedList('qotd', state.qotdDays);
         if (state.activePage === 'us') void this.markTodayQotdSeen();
-        this.renderActiveDataPage('us');
+        rerenderUs();
       }, error => this.showDataError('Us questions', error)),
       subscribeList('funPacks', packs => {
         state.funPacks = packs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         saveCachedList('funPacks', state.funPacks);
-        this.renderActiveDataPage('fun');
+        rerenderFun();
       }, error => this.showDataError('Fun vault', error))
     );
     if (state.currentUser?.role === 'me') {
@@ -708,12 +719,12 @@ export class DashboardApp {
         subscribeWorkoutProgram(program => {
           state.workoutProgram = program;
           saveCachedValue('workoutProgram', program);
-          this.renderActiveDataPage('train');
+          rerenderTrain();
         }, error => this.showDataError('Train program', error)),
         subscribeWorkoutSessions(sessions => {
           state.workoutSessions = sessions;
           saveCachedValue('workoutSessions', sessions);
-          this.renderActiveDataPage('train');
+          rerenderTrain();
         }, error => this.showDataError('Train sessions', error))
       );
     }
@@ -789,7 +800,7 @@ export class DashboardApp {
       .forEach(file => state.funMediaPicks.push(fileToPick(file)));
     state.funStatus = `${state.funMediaPicks.length} file${state.funMediaPicks.length === 1 ? '' : 's'} ready`;
     const previews = document.getElementById('fun-previews');
-    if (previews) previews.innerHTML = renderFunPreviews(state);
+    if (previews) morphHtml(previews, renderFunPreviews(state));
     const input = document.querySelector<HTMLInputElement>('#fun-files');
     if (input) input.value = '';
     const save = document.querySelector<HTMLButtonElement>('.fun-save');
@@ -804,7 +815,7 @@ export class DashboardApp {
     state.funMediaPicks.splice(index, 1);
     state.funStatus = state.funMediaPicks.length ? `${state.funMediaPicks.length} file${state.funMediaPicks.length === 1 ? '' : 's'} ready` : '';
     const previews = document.getElementById('fun-previews');
-    if (previews) previews.innerHTML = renderFunPreviews(state);
+    if (previews) morphHtml(previews, renderFunPreviews(state));
     const save = document.querySelector<HTMLButtonElement>('.fun-save');
     if (save) {
       save.disabled = !state.funMediaPicks.length;
@@ -862,9 +873,9 @@ export class DashboardApp {
           ${url
             ? file.type === 'video'
               ? `<video src="${url}" controls playsinline preload="metadata"></video>`
-              : `<img src="${url}" alt="${escapeAttr(file.name)}">`
+              : `<img src="${url}" alt="${escapeAttr(file.name)}" loading="lazy" decoding="async">`
             : file.preview
-              ? `<img src="${file.preview}" alt="${escapeAttr(file.name)}">`
+              ? `<img src="${file.preview}" alt="${escapeAttr(file.name)}" loading="lazy" decoding="async">`
               : `<div class="fun-viewer-missing">${file.type === 'video' ? '🎥' : '📸'}<span>media link unavailable</span></div>`}
         </div>
         <div class="fun-viewer-name">${escapeHtml(file.name)}</div>
@@ -1374,7 +1385,7 @@ export class DashboardApp {
     if (!files) return;
     Array.from(files).slice(0, 15 - state.mediaPicks.length).forEach(file => state.mediaPicks.push(fileToPick(file)));
     const previews = document.getElementById('m-eprev');
-    if (previews) previews.innerHTML = renderMediaPreviews(state);
+    if (previews) morphHtml(previews, renderMediaPreviews(state));
     qs<HTMLInputElement>('#m-efiles').value = '';
   }
 
@@ -1382,7 +1393,7 @@ export class DashboardApp {
     URL.revokeObjectURL(state.mediaPicks[index]?.prev);
     state.mediaPicks.splice(index, 1);
     const previews = document.getElementById('m-eprev');
-    if (previews) previews.innerHTML = renderMediaPreviews(state);
+    if (previews) morphHtml(previews, renderMediaPreviews(state));
   }
 
   private resetWorkModal(): void {
@@ -1398,7 +1409,7 @@ export class DashboardApp {
       .slice(0, 8 - state.workMediaPicks.length)
       .forEach(file => state.workMediaPicks.push(fileToPick(file)));
     const previews = document.getElementById(previewId);
-    if (previews) previews.innerHTML = renderWorkMediaPreviews(state);
+    if (previews) morphHtml(previews, renderWorkMediaPreviews(state));
     qs<HTMLInputElement>(`#${inputId}`).value = '';
   }
 
@@ -1406,9 +1417,9 @@ export class DashboardApp {
     URL.revokeObjectURL(state.workMediaPicks[index]?.prev);
     state.workMediaPicks.splice(index, 1);
     const previews = document.getElementById('m-kprev');
-    if (previews) previews.innerHTML = renderWorkMediaPreviews(state);
+    if (previews) morphHtml(previews, renderWorkMediaPreviews(state));
     const detailPreviews = document.getElementById('m-kd-prev');
-    if (detailPreviews) detailPreviews.innerHTML = renderWorkMediaPreviews(state);
+    if (detailPreviews) morphHtml(detailPreviews, renderWorkMediaPreviews(state));
   }
 
   private resetGameModal(): void {
@@ -1424,7 +1435,7 @@ export class DashboardApp {
     releasePicks(state.gameCoverPicks);
     state.gameCoverPicks = [fileToPick(files[0])];
     const previews = document.getElementById(previewId);
-    if (previews) previews.innerHTML = renderGameCoverPreview(state);
+    if (previews) morphHtml(previews, renderGameCoverPreview(state));
     qs<HTMLInputElement>(`#${inputId}`).value = '';
   }
 
@@ -1432,16 +1443,16 @@ export class DashboardApp {
     URL.revokeObjectURL(state.gameCoverPicks[index]?.prev);
     state.gameCoverPicks.splice(index, 1);
     const previews = document.getElementById('m-gcover-prev');
-    if (previews) previews.innerHTML = renderGameCoverPreview(state);
+    if (previews) morphHtml(previews, renderGameCoverPreview(state));
     const detailPreviews = document.getElementById('m-gd-cover-prev');
-    if (detailPreviews) detailPreviews.innerHTML = renderGameCoverPreview(state);
+    if (detailPreviews) morphHtml(detailPreviews, renderGameCoverPreview(state));
   }
 
   private handleGameMediaFiles(files: FileList | null, previewId = 'm-gprev', inputId = 'm-gfiles'): void {
     if (!files) return;
     Array.from(files).slice(0, 12 - state.gameMediaPicks.length).forEach(file => state.gameMediaPicks.push(fileToPick(file)));
     const previews = document.getElementById(previewId);
-    if (previews) previews.innerHTML = renderGameMediaPreviews(state);
+    if (previews) morphHtml(previews, renderGameMediaPreviews(state));
     qs<HTMLInputElement>(`#${inputId}`).value = '';
   }
 
@@ -1449,9 +1460,9 @@ export class DashboardApp {
     URL.revokeObjectURL(state.gameMediaPicks[index]?.prev);
     state.gameMediaPicks.splice(index, 1);
     const previews = document.getElementById('m-gprev');
-    if (previews) previews.innerHTML = renderGameMediaPreviews(state);
+    if (previews) morphHtml(previews, renderGameMediaPreviews(state));
     const detailPreviews = document.getElementById('m-gd-prev');
-    if (detailPreviews) detailPreviews.innerHTML = renderGameMediaPreviews(state);
+    if (detailPreviews) morphHtml(detailPreviews, renderGameMediaPreviews(state));
   }
 
   private async saveAtlasEntry(): Promise<void> {
@@ -1496,8 +1507,7 @@ export class DashboardApp {
   }
 
   private refreshEntriesList(): void {
-    const root = document.getElementById('entries-list');
-    if (root) root.innerHTML = renderEntriesList(state, filteredEntries(state));
+    morphNode('#entries-list', renderEntriesList(state, filteredEntries(state)));
   }
 
   private async saveGame(): Promise<void> {
@@ -1509,14 +1519,17 @@ export class DashboardApp {
     const colors = palette[Math.floor(Math.random() * palette.length)];
     try {
       const media = await serializeMedia(state.gameMediaPicks, label => { button.textContent = label; });
-      const coverMedia = await serializeMedia(state.gameCoverPicks, label => { button.textContent = label; });
+      const coverPick = state.gameCoverPicks[0];
+      const uploadedCover = coverPick ? await compressImage(coverPick.file, 900, 0.75) : '';
+      const coverThumb = coverPick ? await compressImage(coverPick.file, 480, 0.72) : '';
       button.textContent = 'saving...';
       const game: Game = {
         id: `g_${Date.now()}`,
         name,
         platform: qs<HTMLSelectElement>('#m-gplat').value,
         status: qs<HTMLSelectElement>('#m-gstatus').value as GameStatus,
-        cover: coverMedia[0]?.data || formValue(document, '#m-gcover'),
+        cover: uploadedCover || formValue(document, '#m-gcover'),
+        coverThumb: coverThumb || undefined,
         url: formValue(document, '#m-gurl'),
         clips: this.parseLines(formValue(document, '#m-gclips')),
         story: formValue(document, '#m-gstory'),
@@ -1550,7 +1563,9 @@ export class DashboardApp {
     button.disabled = true;
     try {
       const addedMedia = await serializeMedia(state.gameMediaPicks, label => { button.textContent = label; });
-      const coverMedia = await serializeMedia(state.gameCoverPicks, label => { button.textContent = label; });
+      const coverPick = state.gameCoverPicks[0];
+      const uploadedCover = coverPick ? await compressImage(coverPick.file, 900, 0.75) : '';
+      const coverThumb = coverPick ? await compressImage(coverPick.file, 480, 0.72) : '';
       button.textContent = 'saving...';
       const updated: Game = {
         ...game,
@@ -1558,7 +1573,8 @@ export class DashboardApp {
         status: qs<HTMLSelectElement>('#m-gd-status').value as GameStatus,
         now: checked(document, '#m-gd-now'),
         url: formValue(document, '#m-gd-url'),
-        cover: coverMedia[0]?.data || formValue(document, '#m-gd-cover'),
+        cover: uploadedCover || formValue(document, '#m-gd-cover'),
+        coverThumb: coverThumb || game.coverThumb,
         clips: this.parseLines(formValue(document, '#m-gd-clips')),
         story: formValue(document, '#m-gd-story'),
         media: [...(game.media || []), ...addedMedia]

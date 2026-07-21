@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^10.14.1"
+    "firebase": "^10.14.1",
+    "morphdom": "^2.7.8"
   },
   "devDependencies": {
     "@netlify/functions": "^2.8.2",

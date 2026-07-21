@@ -59,7 +59,7 @@ function renderMedia(exercise: WorkoutExercise): string {
   if (exercise.video) {
     return `<video class="train-ex-media" src="${esc(exercise.video)}" controls playsinline preload="metadata"></video>`;
   }
-  return `<img class="train-ex-media" src="${esc(exercise.image || '/exercise-placeholder.svg')}" alt="${esc(exercise.name)}" loading="lazy">`;
+  return `<img class="train-ex-media" src="${esc(exercise.image || '/exercise-placeholder.svg')}" alt="${esc(exercise.name)}" loading="lazy" decoding="async">`;
 }
 
 function renderSetLog(state: AppState, exercise: WorkoutExercise, session?: WorkoutSession): string {

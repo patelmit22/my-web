@@ -72,6 +72,7 @@ export interface Game {
   platform?: string;
   status: GameStatus;
   cover?: string;
+  coverThumb?: string;
   url?: string;
   clips?: string[];
   story?: string;

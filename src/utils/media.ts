@@ -22,13 +22,12 @@ export function releasePicks(picks: MediaPick[]): void {
   picks.forEach(pick => URL.revokeObjectURL(pick.prev));
 }
 
-export function compressImage(file: File): Promise<string> {
+export function compressImage(file: File, max = 900, quality = 0.75): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const max = 1200;
       let { width, height } = img;
       if (width > max || height > max) {
         if (width > height) {
@@ -43,20 +42,19 @@ export function compressImage(file: File): Promise<string> {
       canvas.height = height;
       canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.75));
+      resolve(canvas.toDataURL('image/jpeg', quality));
     };
     img.onerror = reject;
     img.src = url;
   });
 }
 
-export function compressImageFile(file: File, name: string): Promise<File> {
+export function compressImageFile(file: File, name: string, max = 900, quality = 0.75): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const max = 1600;
       let { width, height } = img;
       if (width > max || height > max) {
         if (width > height) {
@@ -77,7 +75,7 @@ export function compressImageFile(file: File, name: string): Promise<File> {
           return;
         }
         resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() }));
-      }, 'image/jpeg', 0.78);
+      }, 'image/jpeg', quality);
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);

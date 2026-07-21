@@ -13,8 +13,8 @@ export function renderFunPreviews(state: AppState): string {
 
   return state.funMediaPicks.map((pick, index) => `<div class="fun-preview">
     ${pick.type === 'video'
-      ? `<video src="${pick.prev}" muted playsinline controls></video>`
-      : `<img src="${pick.prev}" alt="${esc(pick.name)}">`}
+      ? `<video src="${pick.prev}" muted playsinline controls preload="metadata"></video>`
+      : `<img src="${pick.prev}" alt="${esc(pick.name)}" loading="lazy" decoding="async">`}
     <div class="fun-preview-name">${esc(pick.name)}</div>
     <button class="fun-remove" data-action="remove-fun-media" data-index="${index}" title="remove">×</button>
   </div>`).join('');
@@ -23,7 +23,7 @@ export function renderFunPreviews(state: AppState): string {
 function renderPackIcon(pack: FunPack): string {
   const first = pack.files.find(file => file.preview);
   if (first?.preview) {
-    return `<img src="${first.preview}" alt="${esc(pack.title)} preview">`;
+    return `<img src="${first.preview}" alt="${esc(pack.title)} preview" loading="lazy" decoding="async">`;
   }
   const hasVideo = pack.files.some(file => file.type === 'video');
   const hasImage = pack.files.some(file => file.type === 'image');

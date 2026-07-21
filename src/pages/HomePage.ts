@@ -79,11 +79,11 @@ export function renderHomePage(state: AppState): string {
         <span class="orbit-card orbit-work">${openTasks} work open</span>
       </div>
     </div>
-    <div class="home-status-grid">
-      <div class="home-status"><span>personal income</span><strong>${currency(monthIn)}</strong></div>
-      <div class="home-status"><span>personal spent</span><strong class="danger">${currency(monthOut)}</strong></div>
-      <div class="home-status"><span>latest story</span><strong>${latestStory}</strong></div>
-      <div class="home-status"><span>now playing</span><strong>${currentGame}</strong></div>
+    <div class="home-status-grid" id="home-status-grid">
+      <div class="home-status"><span>personal income</span><strong id="home-personal-income">${currency(monthIn)}</strong></div>
+      <div class="home-status"><span>personal spent</span><strong id="home-personal-spent" class="danger">${currency(monthOut)}</strong></div>
+      <div class="home-status"><span>latest story</span><strong id="home-latest-story">${latestStory}</strong></div>
+      <div class="home-status"><span>now playing</span><strong id="home-now-playing">${currentGame}</strong></div>
     </div>
     <div class="home-focus-strip">
       <div class="home-focus-card">
@@ -107,35 +107,35 @@ export function renderHomePage(state: AppState): string {
     <div class="tiles">
       <button class="tile tile-finance" data-action="nav" data-page="finance">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 0 010 7H6"/></svg></div>
-        <div class="tile-name">Finance</div><div class="tile-desc">income, spend, balance</div><div class="tile-stat">${currency(personalBalance)} personal balance</div>
+        <div class="tile-name">Finance</div><div class="tile-desc">income, spend, balance</div><div class="tile-stat" id="tile-finance-summary">${currency(personalBalance)} personal balance</div>
       </button>
       <button class="tile tile-work" data-action="nav" data-page="work">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M16 4v16"/></svg></div>
-        <div class="tile-name">Work board</div><div class="tile-desc">to-do, doing, done</div><div class="tile-stat">${openTasks} open · ${doneTasks} done</div>
+        <div class="tile-name">Work board</div><div class="tile-desc">to-do, doing, done</div><div class="tile-stat" id="tile-work-summary">${openTasks} open · ${doneTasks} done</div>
       </button>
       <button class="tile tile-atlas" data-action="nav" data-page="atlas">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h12a3 3 0 013 3v13a2 2 0 00-2-2H4z"/><path d="M4 4v16"/></svg></div>
-        <div class="tile-name">Atlas</div><div class="tile-desc">our stories &amp; memories</div><div class="tile-stat">${state.entries.length} ${state.entries.length === 1 ? 'entry' : 'entries'}</div>
+        <div class="tile-name">Atlas</div><div class="tile-desc">our stories &amp; memories</div><div class="tile-stat" id="tile-atlas-count">${state.entries.length} ${state.entries.length === 1 ? 'entry' : 'entries'}</div>
       </button>
       <button class="tile tile-games" data-action="nav" data-page="games">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="11" rx="3"/><path d="M7 12h3M8.5 10.5v3M14 11h.01M17 13h.01"/></svg></div>
-        <div class="tile-name">Games</div><div class="tile-desc">what i'm playing</div><div class="tile-stat">${state.games.length} total · ${playing} playing</div>
+        <div class="tile-name">Games</div><div class="tile-desc">what i'm playing</div><div class="tile-stat" id="tile-games-summary">${state.games.length} total · ${playing} playing</div>
       </button>
       <button class="tile tile-us" data-action="nav" data-page="us">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg></div>
-        <div class="tile-name">Us</div><div class="tile-desc">daily question together</div><div class="tile-stat">${usAnswered ? 'revealed today' : usQuestion}</div>
+        <div class="tile-name">Us</div><div class="tile-desc">daily question together</div><div class="tile-stat" id="tile-us-summary">${usAnswered ? 'revealed today' : usQuestion}</div>
       </button>
       ${state.currentUser?.role === 'me' ? `<button class="tile tile-train" data-action="nav" data-page="train">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M7 12h10"/></svg></div>
-        <div class="tile-name">Train</div><div class="tile-desc">push, pull, legs</div><div class="tile-stat">${workoutStat}</div>
+        <div class="tile-name">Train</div><div class="tile-desc">push, pull, legs</div><div class="tile-stat" id="tile-train-summary">${workoutStat}</div>
       </button>` : ''}
       <button class="tile tile-documents" data-action="nav" data-page="documents">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg></div>
-        <div class="tile-name">Documents</div><div class="tile-desc">Google Drive locker</div><div class="tile-stat">${state.driveDocs.length} loaded</div>
+        <div class="tile-name">Documents</div><div class="tile-desc">Google Drive locker</div><div class="tile-stat" id="tile-documents-summary">${state.driveDocs.length} loaded</div>
       </button>
       <button class="tile tile-fun" data-action="nav" data-page="fun">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 13l2.5-3 2 2.5 1.5-1.8L18 16H6z"/><circle cx="8" cy="9" r="1"/></svg></div>
-        <div class="tile-name">Fun vault</div><div class="tile-desc">photos, videos, Firebase</div><div class="tile-stat">${state.funPacks.length} saved</div>
+        <div class="tile-name">Fun vault</div><div class="tile-desc">photos, videos, Firebase</div><div class="tile-stat" id="tile-fun-summary">${state.funPacks.length} saved</div>
       </button>
     </div>
   </section>`;

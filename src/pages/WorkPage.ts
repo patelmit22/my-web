@@ -12,7 +12,7 @@ const columns: Array<{ key: WorkColumn; name: string }> = [
 export function renderWorkPage(state: AppState): string {
   return `<section class="page active" id="page-work">
     <div class="page-header"><div><div class="page-title">Work board</div><div class="page-sub">add work, attach photos, and move it from to do → doing → done</div></div><button class="btn-accent" data-action="open-task-modal" data-col="todo">+ add work</button></div>
-    <div class="board">${columns.map(column => {
+    <div class="board" id="board">${columns.map(column => {
       const tasks = state.tasks.filter(task => task.col === column.key);
       return `<div class="col"><div class="col-header"><div class="col-name"><span class="col-dot ${column.key}"></span>${column.name}</div><div class="col-count">${tasks.length}</div></div>
         <div class="cards">${tasks.map(task => `<article class="task" data-action="open-task-detail" data-id="${esc(task.id)}" tabindex="0">
@@ -83,11 +83,11 @@ export function renderTaskDetailModal(state: AppState): string {
 export function renderWorkMediaPreviews(state: AppState): string {
   if (!state.workMediaPicks.length) return '';
   return state.workMediaPicks.map((pick, index) => `<div class="preview">
-    <img src="${pick.prev}" alt="">
+    <img src="${pick.prev}" alt="" loading="lazy" decoding="async">
     <button data-action="remove-work-media" data-index="${index}">×</button>
   </div>`).join('');
 }
 
 function renderTaskMedia(media: AtlasMedia[]): string {
-  return media.filter(item => item.type === 'image').map(item => `<img src="${item.data}" alt="${esc(item.name || 'work photo')}">`).join('');
+  return media.filter(item => item.type === 'image').map(item => `<img src="${item.data}" alt="${esc(item.name || 'work photo')}" loading="lazy" decoding="async">`).join('');
 }

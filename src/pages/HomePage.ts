@@ -1,5 +1,6 @@
 import type { AppState } from '../state/appState';
 import type { FinanceKind, Transaction } from '../types/models';
+import { renderDistanceTile } from '../components/DistanceTile';
 import { renderRoseLogo } from '../components/RoseLogo';
 import { renderRoseGreeting } from '../components/RoseGreeting';
 import { currency, greetingTime } from '../utils/format';
@@ -103,6 +104,7 @@ export function renderHomePage(state: AppState): string {
         <span>${doneTasks} done</span>
       </div>
     </div>
+    ${renderDistanceTile(state)}
     ${renderWeeklyActivity(state)}
     <div class="tiles">
       <button class="tile tile-finance" data-action="nav" data-page="finance">

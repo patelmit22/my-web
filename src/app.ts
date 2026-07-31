@@ -1,5 +1,6 @@
 import { cleanAuthError, configureAuthPersistence, onAuthChanged, resolveCurrentUser, signIn, signOut } from './api/authApi';
 import {
+  clearNextVisit as clearNextVisitApi,
   deleteEntry,
   deleteFunPack as deleteFunPackApi,
   deleteGame,
@@ -15,19 +16,24 @@ import {
   saveFunPack as saveFunPackApi,
   saveGame as saveGameApi,
   saveHerConfig,
+  saveNextVisit as saveNextVisitApi,
   saveQotdAnswer,
   saveTask,
+  saveTimezoneConfig as saveTimezoneConfigApi,
   saveTransaction,
   saveWeekly,
   subscribeHerConfig,
+  subscribeNextVisit,
   subscribeList,
   subscribeQotd,
+  subscribeTimezoneConfig,
   updateTaskColumn,
   voteQotd
 } from './api/databaseApi';
 import { roseChat, roseGreeting, roseWeekly } from './api/rose';
 import { ensureWorkoutProgramSeeded, saveWorkoutSession, subscribeWorkoutProgram, subscribeWorkoutSessions } from './api/workoutApi';
 import { renderSidebar } from './components/Sidebar';
+import { mountDistanceTile } from './components/DistanceTile';
 import { Lightbox } from './components/Lightbox';
 import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
@@ -37,12 +43,13 @@ import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriv
 import { deleteStorageFile, getStorageFileUrl, uploadFunMedia } from './api/storageApi';
 import { localDateKey, questionForDate } from './data/qotdQuestions';
 import { state } from './state/appState';
-import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, PageId, Transaction, WorkColumn, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from './types/models';
+import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPack, FunSavedMedia, Game, GameStatus, NextVisit, PageId, TimezoneConfig, Transaction, WorkColumn, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from './types/models';
 import { checked, formValue, morphHtml, morphNode, qs } from './utils/dom';
 import { debounce } from './utils/debounce';
 import { compressImageFile, compressImage, fileToPick, releasePicks, serializeMedia, type MediaPick } from './utils/media';
 import { isSunday, weekKeyForDate } from './utils/qotdDates';
 import { hasQotdAnswer } from './utils/qotdScore';
+import { DEFAULT_TIMEZONE_CONFIG, isValidTimezone, mergeTimezoneConfig } from './utils/timezones';
 import { dateFromSessionKey, dayTypeFor, sessionKey } from './utils/workoutSchedule';
 import {
   filteredEntries,
@@ -71,6 +78,7 @@ export class DashboardApp {
   private readonly unsubs: Array<() => void> = [];
   private readonly reportedDataErrors = new Set<string>();
   private readonly funViewerUrls: string[] = [];
+  private pageCleanup: (() => void) | null = null;
   private driveAutoLoadKey = '';
 
   constructor(private readonly root: HTMLElement) {}
@@ -81,6 +89,7 @@ export class DashboardApp {
     onAuthChanged(async user => {
       if (!user) {
         this.disposeDataSubscriptions();
+        this.disposePageEffects();
         state.currentUser = null;
         state.weeklyActivity = null;
         state.rosePanelOpen = false;
@@ -109,6 +118,7 @@ export class DashboardApp {
   }
 
   private renderAuth(): void {
+    this.disposePageEffects();
     morphHtml(this.root, renderAuthPage());
   }
 
@@ -123,6 +133,7 @@ export class DashboardApp {
     </div>
     <div id="modal-root">${renderModals(state)}</div>
     <div id="rose-root">${renderRoseFab(state)}</div>`);
+    this.mountPageEffects();
   }
 
   private renderView(): void {
@@ -140,6 +151,7 @@ export class DashboardApp {
     morphHtml(main, this.renderCurrentPage());
     morphHtml(modalRoot, renderModals(state));
     this.renderRoseOnly();
+    this.mountPageEffects();
   }
 
   private renderMainOnly(): void {
@@ -151,6 +163,18 @@ export class DashboardApp {
     this.syncSidebarActiveState();
     morphHtml(main, this.renderCurrentPage());
     this.renderRoseOnly();
+    this.mountPageEffects();
+  }
+
+  private mountPageEffects(): void {
+    this.disposePageEffects();
+    if (state.activePage === 'home') this.pageCleanup = mountDistanceTile(document);
+  }
+
+  private disposePageEffects(): void {
+    if (!this.pageCleanup) return;
+    this.pageCleanup();
+    this.pageCleanup = null;
   }
 
   private renderModalsOnly(): void {
@@ -399,6 +423,10 @@ export class DashboardApp {
       case 'love-weekly':
         await this.loveWeeklyActivity();
         break;
+      case 'edit-next-visit':
+        this.navigate('settings');
+        window.requestAnimationFrame(() => document.getElementById('next-visit-date')?.focus());
+        break;
       case 'qotd-score-view':
         state.qotdScoreView = (target.dataset.view as typeof state.qotdScoreView) || 'week';
         this.renderMainOnly();
@@ -608,11 +636,20 @@ export class DashboardApp {
       case 'remove-her':
         if (confirm('remove her access? she will not be able to sign in until added again.')) await removeHerConfig();
         break;
+      case 'save-timezones':
+        await this.saveTimezones();
+        break;
+      case 'save-next-visit':
+        await this.saveNextVisit();
+        break;
+      case 'clear-next-visit':
+        if (confirm('clear the next visit date?')) await this.clearNextVisit();
+        break;
     }
   }
 
   private resolveAllowedPage(page: PageId): PageId {
-    if ((page === 'settings' || page === 'train') && state.currentUser?.role !== 'me') return 'home';
+    if (page === 'train' && state.currentUser?.role !== 'me') return 'home';
     return page;
   }
 
@@ -670,6 +707,9 @@ export class DashboardApp {
     const rerenderSettings = debounce(() => {
       if (state.activePage === 'settings') this.renderMainOnly();
     });
+    const rerenderHomeSettings = debounce(() => {
+      if (state.activePage === 'home' || state.activePage === 'settings') this.renderMainOnly();
+    });
     const rerenderEntries = debounce(() => this.renderActiveDataPage('atlas'));
     const rerenderFinance = debounce(() => this.renderActiveDataPage('finance'));
     const rerenderWork = debounce(() => this.renderActiveDataPage('work'));
@@ -682,6 +722,16 @@ export class DashboardApp {
         state.herConfig = config;
         rerenderSettings();
       }),
+      subscribeTimezoneConfig(config => {
+        state.timezoneConfig = mergeTimezoneConfig(config);
+        saveCachedValue('timezoneConfig', state.timezoneConfig);
+        rerenderHomeSettings();
+      }, error => this.showDataError('Long-distance clocks', error)),
+      subscribeNextVisit(visit => {
+        state.nextVisit = visit;
+        saveCachedValue('nextVisit', state.nextVisit);
+        rerenderHomeSettings();
+      }, error => this.showDataError('Next visit', error)),
       subscribeList('entries', entries => {
         state.entries = entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         saveCachedList('entries', state.entries);
@@ -747,6 +797,8 @@ export class DashboardApp {
     state.funPacks = loadCachedList('funPacks').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     state.workoutProgram = loadCachedValue<Record<WorkoutDayType, WorkoutProgramDay> | null>('workoutProgram', null);
     state.workoutSessions = loadCachedValue<WorkoutSession[]>('workoutSessions', []);
+    state.timezoneConfig = mergeTimezoneConfig(loadCachedValue<Partial<TimezoneConfig> | null>('timezoneConfig', DEFAULT_TIMEZONE_CONFIG));
+    state.nextVisit = loadCachedValue<NextVisit | null>('nextVisit', null);
     state.trainSelectedDate = sessionKey();
     state.trainExpandedLogs = {};
     state.trainShowOverview = true;
@@ -1641,6 +1693,65 @@ export class DashboardApp {
     if (email === state.currentUser.email) return this.toast.show("that's your own email", 'err');
     await saveHerConfig({ email, display, addedBy: state.currentUser.email, addedAt: new Date().toISOString() });
     this.toast.show('saved — she can sign in now', 'ok');
+  }
+
+  private async saveTimezones(): Promise<void> {
+    if (state.currentUser?.role !== 'me') return this.toast.show('owner only', 'err');
+    const config: TimezoneConfig = {
+      meCity: optionalFormValue('#tz-me-city') || DEFAULT_TIMEZONE_CONFIG.meCity,
+      meTz: optionalFormValue('#tz-me-tz') || DEFAULT_TIMEZONE_CONFIG.meTz,
+      herCity: optionalFormValue('#tz-her-city') || DEFAULT_TIMEZONE_CONFIG.herCity,
+      herTz: optionalFormValue('#tz-her-tz') || DEFAULT_TIMEZONE_CONFIG.herTz
+    };
+    if (!isValidTimezone(config.meTz)) return this.toast.show(`invalid timezone: ${config.meTz}`, 'err');
+    if (!isValidTimezone(config.herTz)) return this.toast.show(`invalid timezone: ${config.herTz}`, 'err');
+    try {
+      await saveTimezoneConfigApi(config);
+      state.timezoneConfig = mergeTimezoneConfig(config);
+      saveCachedValue('timezoneConfig', state.timezoneConfig);
+      this.renderMainOnly();
+      this.toast.show('long-distance clocks saved', 'ok');
+    } catch (error) {
+      console.error('timezone save failed', error);
+      this.toast.show(`clocks did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    }
+  }
+
+  private async saveNextVisit(): Promise<void> {
+    const role = state.currentUser?.role;
+    if (!role) return this.toast.show('sign in first', 'err');
+    const date = optionalFormValue('#next-visit-date');
+    if (!date) return this.toast.show('pick a visit date', 'err');
+    const note = optionalFormValue('#next-visit-note');
+    const visit: NextVisit = {
+      date,
+      setBy: role,
+      setAt: new Date().toISOString()
+    };
+    if (note) visit.note = note;
+    try {
+      await saveNextVisitApi(visit);
+      state.nextVisit = visit;
+      saveCachedValue('nextVisit', state.nextVisit);
+      this.renderMainOnly();
+      this.toast.show('next visit saved', 'ok');
+    } catch (error) {
+      console.error('next visit save failed', error);
+      this.toast.show(`visit did not save: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    }
+  }
+
+  private async clearNextVisit(): Promise<void> {
+    try {
+      await clearNextVisitApi();
+      state.nextVisit = null;
+      saveCachedValue('nextVisit', state.nextVisit);
+      this.renderMainOnly();
+      this.toast.show('next visit cleared', 'ok');
+    } catch (error) {
+      console.error('next visit clear failed', error);
+      this.toast.show(`visit did not clear: ${error instanceof Error ? error.message : 'check Firebase rules'}`, 'err');
+    }
   }
 
   private parseLines(value: string): string[] {

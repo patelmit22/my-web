@@ -1,5 +1,6 @@
-import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, PageId, QotdDay, QotdScoreView, RoseMessage, Transaction, WeeklyActivity, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, NextVisit, PageId, QotdDay, QotdScoreView, RoseMessage, TimezoneConfig, Transaction, WeeklyActivity, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from '../types/models';
 import type { MediaPick } from '../utils/media';
+import { DEFAULT_TIMEZONE_CONFIG } from '../utils/timezones';
 
 export interface AppState {
   currentUser: CurrentUser | null;
@@ -45,6 +46,8 @@ export interface AppState {
   lightboxUrls: string[];
   lightboxIndex: number;
   herConfig: HerConfig | null;
+  timezoneConfig: TimezoneConfig;
+  nextVisit: NextVisit | null;
   entries: AtlasEntry[];
   txns: Transaction[];
   tasks: WorkTask[];
@@ -100,6 +103,8 @@ export const state: AppState = {
   lightboxUrls: [],
   lightboxIndex: 0,
   herConfig: null,
+  timezoneConfig: DEFAULT_TIMEZONE_CONFIG,
+  nextVisit: null,
   entries: [],
   txns: [],
   tasks: [],

@@ -1,4 +1,4 @@
-import type { AtlasEntry, FunPack, Game, HerConfig, QotdAnswer, QotdCategory, QotdDay, Transaction, UserRole, WeeklyActivity, WorkTask } from '../types/models';
+import type { AtlasEntry, FunPack, Game, HerConfig, NextVisit, QotdAnswer, QotdCategory, QotdDay, TimezoneConfig, Transaction, UserRole, WeeklyActivity, WorkTask } from '../types/models';
 import { db } from './firebaseClient';
 
 export type DataPath = 'entries' | 'txns' | 'tasks' | 'games' | 'funPacks' | 'qotd';
@@ -195,6 +195,36 @@ export function saveHerConfig(config: HerConfig): Promise<void> {
 
 export function removeHerConfig(): Promise<void> {
   return db.ref('config/her').remove();
+}
+
+export function subscribeTimezoneConfig(
+  callback: (config: Partial<TimezoneConfig> | null) => void,
+  onError: (error: Error) => void
+): () => void {
+  const ref = db.ref('config/timezones');
+  const listener = ref.on('value', snap => callback(snap.val()), error => onError(error));
+  return () => ref.off('value', listener);
+}
+
+export function saveTimezoneConfig(config: TimezoneConfig): Promise<void> {
+  return db.ref('config/timezones').set(config);
+}
+
+export function subscribeNextVisit(
+  callback: (visit: NextVisit | null) => void,
+  onError: (error: Error) => void
+): () => void {
+  const ref = db.ref('config/nextVisit');
+  const listener = ref.on('value', snap => callback(snap.val()), error => onError(error));
+  return () => ref.off('value', listener);
+}
+
+export function saveNextVisit(visit: NextVisit): Promise<void> {
+  return db.ref('config/nextVisit').set(visit);
+}
+
+export function clearNextVisit(): Promise<void> {
+  return db.ref('config/nextVisit').remove();
 }
 
 function normalizeQotdAnswer(value: unknown): QotdAnswer | null {

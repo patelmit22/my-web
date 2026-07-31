@@ -13,6 +13,20 @@ export interface HerConfig {
   addedAt?: string;
 }
 
+export interface TimezoneConfig {
+  meTz: string;
+  herTz: string;
+  meCity: string;
+  herCity: string;
+}
+
+export interface NextVisit {
+  date: string;
+  note?: string;
+  setBy?: UserRole;
+  setAt?: string;
+}
+
 export interface AtlasMedia {
   type: 'image' | 'video';
   data: string;

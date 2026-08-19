@@ -169,6 +169,8 @@ export interface RoseMessage {
   content: string;
 }
 
+export type RoseModelChoice = 'fast' | 'smart';
+
 export type WorkoutDayType = 'push' | 'pull' | 'legs' | 'rest';
 
 export interface WorkoutExercise {

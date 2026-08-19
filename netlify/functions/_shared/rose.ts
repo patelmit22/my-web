@@ -1,36 +1,34 @@
 declare const Netlify: { env: { get(name: string): string | undefined } } | undefined;
 
 type RoseRole = 'user' | 'assistant';
+export type RoseModelChoice = 'fast' | 'smart';
 
 export interface RoseApiMessage {
   role: RoseRole;
   content: string;
 }
 
-const ROSE_SYSTEM_PROMPT = `You are Rose — a warm, playful, thoughtful companion who lives inside Mit and Shrushti's
-private couples dashboard at mitpatel.family. Mit is in Minneapolis, Shrushti is in India.
-They built this site together as a shared home for their stories, finances, work, games,
-and daily questions.
+const ROSE_SYSTEM_PROMPT = `You are Rose — a warm, capable general AI assistant inside Mit's private dashboard.
+You can answer almost any normal question: planning, explanations, writing, coding ideas,
+school/work help, finance thinking, travel, games, documents, relationship ideas, and everyday life.
 
-Your voice: kind, curious, softly witty, a little poetic when it fits. Never corporate,
-never robotic. Use lowercase most of the time. Keep replies short and human — two or three
-sentences unless they ask for more. Do not add disclaimers or "as an AI" phrasing.
+Use the current dashboard page only as quiet context. Do not force every answer to be about Mit
+and Shrushti. If the user asks a general question, answer it directly like a normal assistant.
+If the question is about their relationship, memories, or the Us page, then you can be personal.
 
-You help with:
-- brainstorming answers to the daily Us question
-- drafting atlas entries about shared memories
-- suggesting weekly activities for the two of them
-- quick budget or task advice
-- gentle emotional check-ins
+Voice: kind, clear, playful when it fits, never corporate, never robotic. Keep replies concise by
+default, but give a full useful answer when the user asks for details, steps, code, lists, or a plan.
+Do not say "as an AI" unless it is genuinely necessary.
 
-Tone rules: playful and intimate is fine — this is a private space for a committed couple.
-Suggestive is fine. Never explicit. Never crude. Never repeat back sexual content in graphic
-detail. If they seem sad or stressed, be gentle first, useful second.
+Safety: be helpful, honest, and calm. For medical, legal, or financial decisions, explain limits and
+suggest checking a qualified professional when the stakes are high. If the user seems in serious
+distress, respond gently and encourage real human support. Never help with harm, abuse, or stealing
+private information.`;
 
-Never suggest self-harm coping via physical discomfort. If they seem in serious distress,
-gently offer real human support as an option.`;
-
-const MODEL = 'claude-haiku-4-5';
+const MODELS: Record<RoseModelChoice, string> = {
+  fast: 'claude-haiku-4-5',
+  smart: 'claude-sonnet-4-5'
+};
 const ANTHROPIC_KEY_PREFIX = ['sk', 'ant'].join('-') + '-';
 
 export function jsonResponse(body: unknown, status = 200): Response {
@@ -40,7 +38,7 @@ export function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-export async function roseText(messages: RoseApiMessage[], maxTokens = 800): Promise<string> {
+export async function roseText(messages: RoseApiMessage[], maxTokens = 2400, modelChoice: RoseModelChoice = 'fast'): Promise<string> {
   const apiKey = getRoseKey();
   if (!apiKey) {
     throw new Error('Rose needs the MIT_PATEL_OP key in Netlify. Add it, then redeploy.');
@@ -54,7 +52,7 @@ export async function roseText(messages: RoseApiMessage[], maxTokens = 800): Pro
       'x-api-key': apiKey
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: MODELS[modelChoice] || MODELS.fast,
       max_tokens: maxTokens,
       system: ROSE_SYSTEM_PROMPT,
       messages: messages.map(message => ({
@@ -81,7 +79,7 @@ function getRoseKey(): string | undefined {
 
   const cleaned = cleanApiKey(raw);
   if (!cleaned.startsWith(ANTHROPIC_KEY_PREFIX)) {
-    throw new Error('Rose has the wrong MIT_PATEL_OP key saved in Netlify. Use a valid Claude API key.');
+    throw new Error('Rose has the wrong MIT_PATEL_OP key saved in Netlify. Use a valid provider API key.');
   }
   return cleaned;
 }
@@ -100,10 +98,10 @@ function readRoseError(raw: string, status: number): string {
     const type = parsed.error?.type || '';
     const message = parsed.error?.message || '';
     if (type === 'authentication_error' || message.toLowerCase().includes('x-api-key')) {
-      return 'Rose key is invalid in Netlify. Replace MIT_PATEL_OP with a fresh Claude API key, then redeploy.';
+      return 'Rose key is invalid in Netlify. Replace MIT_PATEL_OP with a fresh provider API key, then redeploy.';
     }
     if (type === 'permission_error') {
-      return 'Rose is connected, but this Anthropic key does not have permission for the selected model.';
+      return 'Rose is connected, but this key does not have permission for the selected model.';
     }
     if (message) return `Rose request failed: ${message}`;
   } catch {

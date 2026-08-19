@@ -1,4 +1,4 @@
-import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, NextVisit, PageId, QotdDay, QotdScoreView, RoseMessage, TimezoneConfig, Transaction, WeeklyActivity, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, NextVisit, PageId, QotdDay, QotdScoreView, RoseMessage, RoseModelChoice, TimezoneConfig, Transaction, WeeklyActivity, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from '../types/models';
 import type { MediaPick } from '../utils/media';
 import { DEFAULT_TIMEZONE_CONFIG } from '../utils/timezones';
 
@@ -38,6 +38,7 @@ export interface AppState {
   weeklyActivity: WeeklyActivity | null;
   rosePanelOpen: boolean;
   roseConvo: RoseMessage[];
+  roseModel: RoseModelChoice;
   roseInput: string;
   roseBusy: boolean;
   roseError: string;
@@ -95,6 +96,7 @@ export const state: AppState = {
   weeklyActivity: null,
   rosePanelOpen: false,
   roseConvo: [],
+  roseModel: 'fast',
   roseInput: '',
   roseBusy: false,
   roseError: '',

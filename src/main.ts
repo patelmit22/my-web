@@ -2,6 +2,7 @@ import './styles/base.css';
 import './styles/layout.css';
 import './styles/components.css';
 import './styles/pages.css';
+import './roseHardReset';
 import { DashboardApp } from './app';
 
 const root = document.getElementById('app');

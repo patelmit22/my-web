@@ -1,11 +1,11 @@
 import type { Config } from '@netlify/functions';
-import { jsonResponse, roseText, type RoseApiMessage } from './_shared/rose';
+import { jsonResponse, roseText, type RoseApiMessage, type RoseModelChoice } from './_shared/rose';
 
 export default async (req: Request): Promise<Response> => {
   if (req.method !== 'POST') return jsonResponse({ error: 'method not allowed' }, 405);
 
   try {
-    const body = await req.json() as { messages?: RoseApiMessage[]; page?: string };
+    const body = await req.json() as { messages?: RoseApiMessage[]; page?: string; model?: RoseModelChoice };
     const messages = (body.messages || [])
       .filter(message => (message.role === 'user' || message.role === 'assistant') && message.content?.trim())
       .slice(-12);
@@ -13,10 +13,11 @@ export default async (req: Request): Promise<Response> => {
     if (!messages.length) return jsonResponse({ error: 'message is required' }, 400);
 
     const pageNote = body.page ? `current page: ${body.page}` : 'current page: dashboard';
+    const model = body.model === 'smart' ? 'smart' : 'fast';
     const text = await roseText([
       { role: 'user', content: `use this page context quietly: ${pageNote}` },
       ...messages
-    ]);
+    ], 2400, model);
 
     return jsonResponse({ text });
   } catch (error) {

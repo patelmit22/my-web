@@ -1,12 +1,12 @@
-import type { PageId, RoseMessage, UserRole } from '../types/models';
+import type { PageId, RoseMessage, RoseModelChoice, UserRole } from '../types/models';
 
 interface RoseResponse {
   text?: string;
   error?: string;
 }
 
-export async function roseChat(messages: RoseMessage[], page: PageId): Promise<string> {
-  return postRose('/.netlify/functions/rose-chat', { messages, page });
+export async function roseChat(messages: RoseMessage[], page: PageId, model: RoseModelChoice): Promise<string> {
+  return postRose('/.netlify/functions/rose-chat', { messages, page, model });
 }
 
 export async function roseGreeting(display: string, role: UserRole): Promise<string> {

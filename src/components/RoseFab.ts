@@ -22,6 +22,10 @@ export function renderRoseFab(state: AppState): string {
       <div class="rose-panel-head">
         <div><span class="rose-avatar">${renderRoseLogo()}</span><strong>Rose</strong></div>
         <div class="rose-head-actions">
+          <div class="rose-model-toggle" aria-label="Rose answer mode">
+            <button class="${state.roseModel === 'fast' ? 'active' : ''}" data-action="set-rose-model" data-model="fast">fast</button>
+            <button class="${state.roseModel === 'smart' ? 'active' : ''}" data-action="set-rose-model" data-model="smart">smart</button>
+          </div>
           <button data-action="clear-rose">clear</button>
           <button data-action="close-rose" aria-label="close Rose">×</button>
         </div>
@@ -53,7 +57,7 @@ function renderRoseMessage(message: RoseMessage): string {
 function renderEmptyRose(): string {
   return `<div class="rose-empty">
     <span class="rose-empty-mark">${renderRoseLogo('rose-logo rose-logo-empty')}</span>
-    <p>i'm here when you want a little help, a soft idea, or a better sentence.</p>
+    <p>ask me anything. i can help with normal questions, writing, planning, code ideas, or dashboard stuff.</p>
   </div>`;
 }
 
@@ -94,8 +98,8 @@ function quickActionForPage(state: AppState): QuickAction {
     };
   }
   return {
-    label: '✨ surprise me',
-    prompt: 'give me one thoughtful tiny thing I could do for Shrushti today.'
+    label: '✨ ask me anything',
+    prompt: ''
   };
 }
 

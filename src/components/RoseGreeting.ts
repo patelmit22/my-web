@@ -4,7 +4,7 @@ import { esc } from '../utils/sanitize';
 
 export function renderRoseGreeting(state: AppState): string {
   if (!state.currentUser || !state.roseGreeting || state.roseGreetingDismissed) return '';
-  return `<div class="rose-greeting-toast">
+  return `<div class="rose-greeting-toast" data-action="toggle-rose" role="button" tabindex="0" aria-label="open Rose chat">
     <div class="rose-greeting-avatar">${renderRoseLogo()}</div>
     <div>
       <strong>Rose</strong>

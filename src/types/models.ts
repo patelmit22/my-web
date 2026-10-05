@@ -193,3 +193,12 @@ export interface WorkoutSession {
 }
 
 export type PageId = 'home' | 'finance' | 'work' | 'atlas' | 'games' | 'us' | 'train' | 'documents' | 'fun' | 'settings';
+
+export interface RoseMessage { role: 'user' | 'assistant'; content: string; }
+export type RoseModel = 'haiku' | 'sonnet';
+export interface WeeklyActivity {
+  weekKey: string;
+  suggestion: string;
+  createdAt: string;
+  seenBy?: { me?: boolean; her?: boolean };
+}

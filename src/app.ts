@@ -1,3 +1,8 @@
+import { mountRoseFab, renderRoseFab, unmountRoseFab, handleRoseAction } from './components/RoseFab';
+import { mountRoseGreeting, resetRoseGreeting } from './components/RoseGreeting';
+import { roseGreeting, roseWeekly } from './api/rose';
+import { subscribeWeekly, getWeekly, saveWeekly, markWeeklySeen } from './api/databaseApi';
+import { weekKeyForDate as isoWeekKey } from './utils/qotdDates';
 import { cleanAuthError, configureAuthPersistence, onAuthChanged, resolveCurrentUser, signIn, signOut } from './api/authApi';
 import {
   clearNextVisit as clearNextVisitApi,
@@ -84,14 +89,24 @@ export class DashboardApp {
       if (!user) {
         this.disposeDataSubscriptions();
         this.disposePageEffects();
+        unmountRoseFab();
+        resetRoseGreeting();
+        state.roseConvo = [];
+        state.roseGreeting = '';
+        state.rosePanelOpen = false;
+        state.roseBusy = false;
+        state.weeklyActivity = null;
         state.currentUser = null;
         this.renderAuth();
         return;
       }
       state.currentUser = await resolveCurrentUser(user.email || '');
       state.activePage = 'home';
+      resetRoseGreeting();
       this.hydrateCachedData();
       this.renderApp();
+      mountRoseFab(state);
+      void this.loadRoseGreeting();
       this.replaceHistory('home');
       this.subscribeToData();
       if (state.currentUser.role === 'me') {
@@ -147,6 +162,8 @@ export class DashboardApp {
   }
 
   private mountPageEffects(): void {
+    renderRoseFab(state);
+    mountRoseGreeting(state, () => this.renderMainOnly());
     this.disposePageEffects();
     if (state.activePage === 'home') this.pageCleanup = mountDistanceTile(document);
   }
@@ -342,6 +359,27 @@ export class DashboardApp {
       case 'save-qotd':
         await this.saveQotd();
         break;
+      case 'open-rose':
+      case 'close-rose':
+      case 'clear-rose':
+      case 'send-rose':
+      case 'rose-quick':
+      case 'rose-model-toggle':
+        await handleRoseAction(state, target);
+        break;
+      case 'dismiss-greeting':
+        state.roseGreeting = '';
+        this.renderMainOnly();
+        break;
+      case 'rose-weekly-seen': {
+        const week = state.weeklyActivity;
+        const role = state.currentUser?.role;
+        if (week && role) {
+          try { await markWeeklySeen(week.weekKey, role); }
+          catch { this.toast.show('activity did not save', 'err'); }
+        }
+        break;
+      }
       case 'edit-next-visit':
         this.navigate('settings');
         window.requestAnimationFrame(() => document.getElementById('next-visit-date')?.focus());
@@ -622,6 +660,11 @@ export class DashboardApp {
   }
 
   private subscribeToData(): void {
+    this.unsubs.push(subscribeWeekly(w => {
+      state.weeklyActivity = w;
+      if (state.activePage === 'home') this.renderMainOnly();
+    }));
+    void this.ensureRoseWeekly();
     this.disposeDataSubscriptions();
     const rerenderSettings = debounce(() => {
       if (state.activePage === 'settings') this.renderMainOnly();
@@ -1679,6 +1722,32 @@ export class DashboardApp {
 
   private txnTypeForKind(kind: FinanceKind): Transaction['type'] {
     return kind === 'spending' || kind === 'subway_expense' ? 'out' : 'in';
+  }
+
+  private async loadRoseGreeting(): Promise<void> {
+    const user = state.currentUser;
+    if (!user) return;
+    const now = new Date();
+    let text: string;
+    try { text = await roseGreeting(user.display, now.getHours(), now.toLocaleDateString('en-US', { weekday: 'long' })); }
+    catch { text = `hi ${user.display.toLowerCase()}. good to see you.`; }
+    if (state.currentUser !== user) return;
+    state.roseGreeting = text;
+    if (state.activePage === 'home') this.renderMainOnly();
+  }
+
+  private async ensureRoseWeekly(): Promise<void> {
+    const now = new Date();
+    const user = state.currentUser;
+    if (now.getDay() !== 0 || !user) return;
+    const weekKey = isoWeekKey(now);
+    try {
+      const existing = await getWeekly(weekKey);
+      if (!existing && state.currentUser === user) {
+        const text = await roseWeekly();
+        if (state.currentUser === user) await saveWeekly(weekKey, text);
+      }
+    } catch (error) { console.warn('rose weekly failed', error); }
   }
 
   private async markTodayQotdSeen(): Promise<void> {

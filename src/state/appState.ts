@@ -1,8 +1,15 @@
+import type { RoseMessage, RoseModel, WeeklyActivity } from '../types/models';
 import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, NextVisit, PageId, QotdDay, QotdScoreView, TimezoneConfig, Transaction, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from '../types/models';
 import type { MediaPick } from '../utils/media';
 import { DEFAULT_TIMEZONE_CONFIG } from '../utils/timezones';
 
 export interface AppState {
+  rosePanelOpen: boolean;
+  roseConvo: RoseMessage[];
+  roseBusy: boolean;
+  roseGreeting: string;
+  roseModel: RoseModel;
+  weeklyActivity: WeeklyActivity | null;
   currentUser: CurrentUser | null;
   activePage: PageId;
   atlasSection: AtlasSection;
@@ -52,6 +59,12 @@ export interface AppState {
 }
 
 export const state: AppState = {
+  rosePanelOpen: false,
+  roseConvo: [],
+  roseBusy: false,
+  roseGreeting: '',
+  roseModel: 'haiku',
+  weeklyActivity: null,
   currentUser: null,
   activePage: 'home',
   atlasSection: 'stories',

@@ -1,3 +1,5 @@
+import type { WeeklyActivity } from '../types/models';
+import { weekKeyForDate } from '../utils/qotdDates';
 import type { AtlasEntry, FunPack, Game, HerConfig, NextVisit, QotdAnswer, QotdCategory, QotdDay, TimezoneConfig, Transaction, UserRole, WorkTask } from '../types/models';
 import { db } from './firebaseClient';
 
@@ -219,3 +221,25 @@ function normalizeQotdAnswer(value: unknown): QotdAnswer | null {
   };
 }
 
+
+export function subscribeWeekly(cb: (w: WeeklyActivity | null) => void): () => void {
+  const ref = db.ref(`weekly/${weekKeyForDate()}`);
+  const listener = ref.on('value', snap => cb(snap.val()));
+  return () => ref.off('value', listener);
+}
+
+export async function getWeekly(weekKey: string): Promise<WeeklyActivity | null> {
+  const snap = await db.ref(`weekly/${weekKey}`).once('value');
+  return snap.val();
+}
+
+export async function saveWeekly(weekKey: string, suggestion: string): Promise<void> {
+  // Concurrent logins must not overwrite an existing suggestion or its seen flags.
+  await db.ref(`weekly/${weekKey}`).transaction(existing => existing || {
+    weekKey, suggestion, createdAt: new Date().toISOString(), seenBy: { me: false, her: false }
+  });
+}
+
+export async function markWeeklySeen(weekKey: string, role: 'me' | 'her'): Promise<void> {
+  await db.ref(`weekly/${weekKey}/seenBy/${role}`).set(true);
+}

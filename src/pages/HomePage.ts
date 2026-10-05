@@ -1,3 +1,5 @@
+import { renderRoseGreeting } from '../components/RoseGreeting';
+import { esc } from '../utils/sanitize';
 import type { AppState } from '../state/appState';
 import type { FinanceKind, Transaction } from '../types/models';
 import { renderDistanceTile } from '../components/DistanceTile';
@@ -64,6 +66,7 @@ export function renderHomePage(state: AppState): string {
         : 'write a story, add a game, or save a document';
 
   return `<section class="page active" id="page-home">
+    ${renderRoseGreeting(state)}
     <div class="hero home-hero">
       <div class="home-hero-copy">
         <div class="home-kicker">mitpatel.family dashboard</div>
@@ -102,6 +105,7 @@ export function renderHomePage(state: AppState): string {
       </div>
     </div>
     ${renderDistanceTile(state)}
+    ${renderRoseWeekly(state)}
     <div class="tiles">
       <button class="tile tile-finance" data-action="nav" data-page="finance">
         <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 0 010 7H6"/></svg></div>
@@ -137,4 +141,11 @@ export function renderHomePage(state: AppState): string {
       </button>
     </div>
   </section>`;
+}
+
+function renderRoseWeekly(state: AppState): string {
+  const week = state.weeklyActivity;
+  if (!week?.suggestion) return '';
+  const seen = Boolean(week.seenBy?.[state.currentUser?.role || 'me']);
+  return `<div class="weekly-tile"><img class="rose-logo" src="/rose.svg" alt="" width="34" height="34"><div><strong>this week's fun from Rose</strong><p>${esc(week.suggestion)}</p></div><button type="button" data-action="rose-weekly-seen" ${seen ? 'disabled' : ''}>${seen ? 'saved for me' : 'love this'}</button></div>`;
 }

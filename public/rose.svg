@@ -1,0 +1,55 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Rose">
+  <defs>
+    <!-- Soft glowing center — pink into deep purple -->
+    <radialGradient id="rose-glow" cx="50%" cy="50%" r="55%">
+      <stop offset="0%"   stop-color="#ffd6ea" stop-opacity="0.95"/>
+      <stop offset="35%"  stop-color="#f472b6" stop-opacity="0.55"/>
+      <stop offset="70%"  stop-color="#7c5cff" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Pink → rose-gold stroke used on the nested rings -->
+    <linearGradient id="rose-line" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#ffd6ea"/>
+      <stop offset="55%"  stop-color="#f472b6"/>
+      <stop offset="100%" stop-color="#d29a6a"/>
+    </linearGradient>
+
+    <!-- Gold accent ring -->
+    <linearGradient id="rose-gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#e8c07a"/>
+      <stop offset="60%"  stop-color="#c9a35b"/>
+      <stop offset="100%" stop-color="#8a6a34"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Center bloom glow -->
+  <circle cx="100" cy="100" r="58" fill="url(#rose-glow)"/>
+
+  <!-- Nested "petal" rings — each slightly offset + rotated to spiral inward like the reference -->
+  <g fill="none" stroke="url(#rose-line)" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="100" cy="100" rx="62" ry="60" transform="rotate(-12 100 100)"
+             stroke-width="1.4" opacity="0.65"/>
+    <ellipse cx="102" cy="99"  rx="55" ry="57" transform="rotate(28 102 99)"
+             stroke-width="1.4" opacity="0.75"/>
+    <ellipse cx="99"  cy="101" rx="47" ry="50" transform="rotate(-42 99 101)"
+             stroke-width="1.5" opacity="0.85"/>
+    <ellipse cx="101" cy="100" rx="39" ry="42" transform="rotate(60 101 100)"
+             stroke-width="1.5" opacity="0.9"/>
+    <ellipse cx="100" cy="100" rx="30" ry="32" transform="rotate(-15 100 100)"
+             stroke-width="1.6" opacity="0.95"/>
+
+    <!-- Inner swirl — evokes the tight bud at center -->
+    <path d="M100 78
+             a22 22 0 1 1 -0.1 0
+             M100 84
+             a16 16 0 1 0 0.1 0
+             M100 90
+             a10 10 0 1 1 -0.1 0"
+          stroke-width="1.5" opacity="0.95"/>
+  </g>
+
+  <!-- Gold accent ring, offset toward lower-right like the original -->
+  <ellipse cx="108" cy="112" rx="60" ry="60"
+           fill="none" stroke="url(#rose-gold)" stroke-width="1.4" opacity="0.75"/>
+</svg>

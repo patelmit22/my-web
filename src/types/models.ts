@@ -157,20 +157,6 @@ export interface QotdDay {
 
 export type QotdScoreView = 'week' | 'month' | 'all';
 
-export interface WeeklyActivity {
-  weekKey: string;
-  suggestion: string;
-  createdAt: string;
-  seenBy?: { me?: boolean; her?: boolean };
-}
-
-export interface RoseMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-export type RoseModelChoice = 'fast' | 'smart';
-
 export type WorkoutDayType = 'push' | 'pull' | 'legs' | 'rest';
 
 export interface WorkoutExercise {

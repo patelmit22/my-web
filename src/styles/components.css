@@ -65,175 +65,6 @@
 .toast.ok{border-color:rgba(34,197,94,0.3)}
 .toast.err{border-color:rgba(239,68,68,0.3)}
 
-/* ---------- ROSE ---------- */
-.rose-widget{position:fixed;right:1.35rem;bottom:1.35rem;z-index:420;pointer-events:auto}
-.rose-fab{
-  width:56px;height:56px;border:none;border-radius:50%;
-  background:linear-gradient(135deg,#f472b6,#7c5cff);
-  color:#fff;box-shadow:0 18px 48px rgba(124,92,255,0.45),0 0 0 0 rgba(244,114,182,0.34);
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;pointer-events:auto;padding:3px;overflow:hidden;
-  position:relative;animation:rosePulse 3s ease-in-out infinite;
-}
-.rose-logo{
-  width:100%;height:100%;display:block;border-radius:50%;object-fit:cover;
-  filter:saturate(1.18) contrast(1.08) brightness(1.1);
-}
-.rose-logo-fab{
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16),0 0 18px rgba(244,114,182,0.34);
-}
-.rose-fab:hover{transform:translateY(-2px);box-shadow:0 22px 56px rgba(124,92,255,0.55)}
-.rose-fab em{
-  position:absolute;right:64px;top:50%;transform:translateY(-50%);
-  white-space:nowrap;padding:0.45rem 0.68rem;border-radius:999px;
-  background:rgba(12,14,26,0.92);border:1px solid var(--glass-border);
-  color:#ffd6ec;font-style:normal;font-family:var(--font-ui);font-size:0.75rem;
-  opacity:0;pointer-events:none;transition:opacity 0.2s,transform 0.2s;
-}
-.rose-fab:hover em{opacity:1;transform:translateY(-50%) translateX(-3px)}
-@keyframes rosePulse{
-  0%,100%{box-shadow:0 18px 48px rgba(124,92,255,0.45),0 0 0 0 rgba(244,114,182,0.34)}
-  50%{box-shadow:0 18px 48px rgba(124,92,255,0.45),0 0 0 12px rgba(244,114,182,0)}
-}
-.rose-panel{
-  position:absolute;right:0;bottom:72px;width:380px;height:600px;max-height:calc(100vh - 7rem);
-  background:
-    radial-gradient(circle at 18% 0,rgba(244,114,182,0.18),transparent 34%),
-    radial-gradient(circle at 96% 80%,rgba(124,92,255,0.16),transparent 34%),
-    linear-gradient(180deg,rgba(20,23,41,0.98),rgba(10,12,23,0.98));
-  border:1px solid rgba(244,114,182,0.22);border-radius:22px;
-  box-shadow:0 28px 90px rgba(0,0,0,0.48);
-  display:flex;flex-direction:column;overflow:hidden;
-  opacity:0;transform:translateY(12px) scale(0.98);pointer-events:none;
-  transition:opacity 0.18s ease,transform 0.18s ease;
-}
-.rose-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
-.rose-panel-head{
-  display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1rem;
-  border-bottom:1px solid rgba(255,255,255,0.08);
-}
-.rose-panel-head>div:first-child{display:flex;align-items:center;gap:0.55rem;font-family:var(--font-ui);font-size:1rem}
-.rose-avatar,.rose-msg-avatar{
-  width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,rgba(244,114,182,0.38),rgba(124,92,255,0.28));
-  padding:2px;overflow:hidden;box-shadow:0 0 18px rgba(244,114,182,0.14);
-}
-.rose-head-actions{display:flex;align-items:center;gap:0.35rem}
-.rose-head-actions button{
-  border:1px solid var(--glass-border);background:rgba(255,255,255,0.05);
-  color:var(--ink-dim);border-radius:999px;padding:0.34rem 0.58rem;
-  font-family:var(--font-ui);font-size:0.72rem;cursor:pointer;
-}
-.rose-head-actions button:hover{color:var(--ink);border-color:rgba(244,114,182,0.35)}
-.rose-model-toggle{
-  display:flex;align-items:center;gap:0.18rem;padding:0.16rem;
-  border:1px solid rgba(255,255,255,0.08);border-radius:999px;
-  background:rgba(255,255,255,0.04);
-}
-.rose-model-toggle button{
-  border:none;background:transparent;color:var(--ink-dim);
-  padding:0.25rem 0.48rem;font-size:0.68rem;
-}
-.rose-model-toggle button.active{
-  color:#fff;background:linear-gradient(135deg,rgba(244,114,182,0.72),rgba(124,92,255,0.86));
-  box-shadow:0 8px 20px rgba(124,92,255,0.22);
-}
-.rose-messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:0.75rem}
-.rose-empty{
-  margin:auto;text-align:center;color:var(--ink-dim);line-height:1.6;max-width:260px;
-}
-.rose-empty-mark{
-  width:64px;height:64px;margin:0 auto 0.7rem;display:block;border-radius:50%;
-  padding:3px;background:linear-gradient(135deg,rgba(244,114,182,0.58),rgba(124,92,255,0.5));
-  box-shadow:0 16px 44px rgba(124,92,255,0.28);
-}
-.rose-msg{display:flex;gap:0.55rem;align-items:flex-start}
-.rose-msg p{
-  margin:0;white-space:pre-wrap;line-height:1.55;
-  padding:0.72rem 0.85rem;border-radius:16px;
-  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
-  color:#eef2ff;font-size:0.86rem;
-}
-.rose-msg.user{justify-content:flex-end}
-.rose-msg.user p{background:linear-gradient(135deg,rgba(124,92,255,0.92),rgba(91,63,216,0.92));border-color:transparent;max-width:82%}
-.rose-msg.assistant p{max-width:82%}
-.rose-thinking,.rose-error{
-  border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:0.62rem 0.78rem;
-  color:var(--ink-dim);font-size:0.78rem;
-}
-.rose-thinking span{
-  display:inline-block;width:5px;height:5px;border-radius:50%;background:#f9a8d4;margin-right:3px;
-  animation:roseDot 1s ease-in-out infinite;
-}
-.rose-thinking span:nth-child(2){animation-delay:0.12s}
-.rose-thinking span:nth-child(3){animation-delay:0.24s;margin-right:0.5rem}
-@keyframes roseDot{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-3px);opacity:1}}
-.rose-error{border-color:rgba(239,68,68,0.26);color:#fca5a5;background:rgba(239,68,68,0.08)}
-.rose-composer{border-top:1px solid rgba(255,255,255,0.08);padding:0.85rem}
-.rose-quick{
-  width:100%;border:1px solid rgba(244,114,182,0.22);background:rgba(244,114,182,0.08);
-  color:#ffd6ec;border-radius:999px;padding:0.55rem 0.75rem;font-family:var(--font-ui);font-size:0.78rem;
-  cursor:pointer;margin-bottom:0.65rem;text-align:left;
-}
-.rose-input-row{display:grid;grid-template-columns:1fr auto;gap:0.5rem;align-items:end}
-.rose-input-row textarea{
-  min-height:64px;max-height:130px;resize:vertical;border-radius:14px;border:1px solid var(--glass-border);
-  background:rgba(0,0,0,0.34);color:var(--ink);font-family:var(--font-body);font-size:0.86rem;
-  padding:0.7rem 0.8rem;outline:none;
-}
-.rose-input-row textarea:focus{border-color:rgba(244,114,182,0.4);box-shadow:0 0 0 3px rgba(244,114,182,0.1)}
-.rose-send{
-  border:none;border-radius:14px;background:linear-gradient(135deg,#f472b6,#7c5cff);
-  color:#fff;font-family:var(--font-ui);font-weight:800;padding:0.7rem 0.85rem;cursor:pointer;
-}
-.rose-send:disabled{opacity:0.48;cursor:not-allowed}
-.rose-greeting-toast{
-  display:grid;grid-template-columns:auto 1fr auto;gap:0.78rem;align-items:start;
-  border:1px solid rgba(244,114,182,0.22);border-radius:18px;padding:0.9rem 1rem;margin-bottom:1rem;
-  background:
-    radial-gradient(circle at 0 0,rgba(244,114,182,0.18),transparent 38%),
-    linear-gradient(135deg,rgba(255,255,255,0.065),rgba(255,255,255,0.02));
-  cursor:pointer;
-  transition:border-color 0.18s ease,transform 0.18s ease,background 0.18s ease;
-}
-.rose-greeting-toast:hover{
-  border-color:rgba(244,114,182,0.42);
-  transform:translateY(-1px);
-  background:
-    radial-gradient(circle at 0 0,rgba(244,114,182,0.24),transparent 38%),
-    linear-gradient(135deg,rgba(255,255,255,0.085),rgba(255,255,255,0.025));
-}
-.rose-greeting-avatar{
-  width:40px;height:40px;border-radius:50%;padding:2px;
-  background:linear-gradient(135deg,rgba(244,114,182,0.55),rgba(124,92,255,0.45));
-  box-shadow:0 12px 34px rgba(244,114,182,0.18);
-}
-.rose-greeting-toast strong{display:block;font-family:var(--font-ui);font-size:0.9rem;margin-bottom:0.16rem}
-.rose-greeting-toast p{margin:0;color:var(--ink-dim);line-height:1.5;font-size:0.86rem}
-.rose-greeting-toast button{
-  border:none;background:transparent;color:var(--ink-mute);font-size:1.25rem;cursor:pointer;line-height:1;
-}
-.weekly-tile{
-  display:grid;grid-template-columns:auto 1fr auto;gap:0.85rem;align-items:center;
-  margin:0 0 1.15rem;padding:1rem;border-radius:18px;
-  border:1px solid rgba(244,114,182,0.22);
-  background:
-    radial-gradient(circle at 4% 12%,rgba(244,114,182,0.18),transparent 34%),
-    linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.018));
-}
-.weekly-rose{
-  width:44px;height:44px;border-radius:50%;padding:2px;
-  background:linear-gradient(135deg,rgba(244,114,182,0.58),rgba(124,92,255,0.48));
-  box-shadow:0 14px 34px rgba(124,92,255,0.22);
-}
-.weekly-tile span{display:block;color:#f9a8d4;font-family:var(--font-mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem}
-.weekly-tile p{margin:0;color:var(--ink);line-height:1.55;font-size:0.9rem}
-.weekly-tile button{
-  border:1px solid rgba(244,114,182,0.28);background:rgba(244,114,182,0.1);
-  color:#ffd6ec;border-radius:999px;padding:0.58rem 0.82rem;font-family:var(--font-ui);font-weight:800;cursor:pointer;
-}
-.weekly-tile button:disabled{opacity:0.62;cursor:default}
-
 @media (max-width:720px){
   .modal-backdrop{align-items:flex-end;padding:0.75rem}
   .modal{
@@ -252,19 +83,43 @@
   .upload-box,.media-drop{padding:1rem}
   .toast{left:0.75rem;right:0.75rem;bottom:5.4rem;transform:translateY(140%);text-align:center}
   .toast.show{transform:translateY(0)}
-  .rose-widget{right:1rem;bottom:5.6rem}
-  .rose-fab{width:52px;height:52px}
-  .rose-fab em{display:none}
-  .rose-panel{
-    position:fixed;inset:0;width:auto;height:auto;max-height:none;border-radius:0;
-    border-left:none;border-right:none;border-bottom:none;
-  }
-  .rose-panel-head{padding:1rem 1.05rem calc(0.8rem + env(safe-area-inset-top))}
-  .rose-head-actions{gap:0.28rem}
-  .rose-model-toggle button{padding:0.25rem 0.42rem}
-  .rose-messages{padding:0.9rem}
-  .rose-composer{padding:0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom))}
-  .rose-greeting-toast{grid-template-columns:auto 1fr auto;padding:0.8rem}
-  .weekly-tile{grid-template-columns:1fr;align-items:start}
-  .weekly-tile button{width:100%}
 }
+
+/* ---------- ROSE ---------- */
+.rose-fab{position:fixed;bottom:24px;right:24px;z-index:1000;width:56px;height:56px;border:0;border-radius:50%;background:linear-gradient(135deg,#f472b6,#7c5cff);box-shadow:0 8px 32px rgba(124,92,255,.45);display:flex;align-items:center;justify-content:center;cursor:pointer;animation:rosePulse 3s ease-in-out infinite}
+.rose-fab:hover{animation:none;transform:scale(1.08)}
+.rose-logo{width:34px;height:34px;object-fit:contain;flex-shrink:0}
+@keyframes rosePulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.05);opacity:.88}}
+.rose-panel{position:fixed;bottom:96px;right:24px;z-index:1001;width:380px;height:600px;max-height:calc(100dvh - 120px);max-width:calc(100vw - 48px);display:flex;flex-direction:column;overflow:hidden;border-radius:22px;border:1px solid var(--glass-border);background:linear-gradient(160deg,rgba(30,23,45,.98),rgba(10,12,23,.98));box-shadow:0 24px 80px rgba(0,0,0,.5);transform:translateY(16px);opacity:0;visibility:hidden;pointer-events:none;transition:transform 220ms cubic-bezier(.4,0,.2,1),opacity 220ms cubic-bezier(.4,0,.2,1),visibility 220ms}
+.rose-panel.open{transform:translateY(0);opacity:1;visibility:visible;pointer-events:auto}
+.rose-panel-header{display:flex;align-items:center;gap:6px;padding:12px;border-bottom:1px solid var(--glass-border);flex-shrink:0}
+.rose-brand{display:flex;align-items:center;gap:6px;margin-right:auto;color:var(--ink);font-family:var(--font-ui)}
+.rose-panel-header button{border:0;border-radius:10px;background:var(--glass);color:var(--ink);padding:6px;cursor:pointer}
+.rose-model-toggle{display:flex;gap:2px;border:1px solid var(--glass-border);border-radius:12px;padding:2px}
+.rose-model-toggle button{font-size:11px;white-space:nowrap;background:transparent}
+.rose-model-toggle button.active{background:linear-gradient(135deg,#f472b6,#7c5cff);color:white}
+.rose-messages{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px;padding:16px}
+.rose-msg{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;font-size:14px;border-radius:16px;padding:12px;max-width:88%;color:var(--ink)}
+.rose-msg-user{align-self:flex-end;background:linear-gradient(135deg,var(--accent),#6044d0)}
+.rose-msg-assistant{align-self:flex-start;background:var(--glass);border:1px solid var(--glass-border)}
+.rose-empty{margin:auto;color:var(--ink-dim);text-align:center;line-height:1.6}
+.rose-loading{animation:roseLoading 1s ease-in-out infinite}
+@keyframes roseLoading{0%,100%{opacity:.4}50%{opacity:1}}
+.rose-error{color:#fca5a5;font-size:13px}
+.rose-quick{padding:0 12px 8px}
+.rose-quick button{width:100%;border:1px solid rgba(244,114,182,.3);border-radius:12px;padding:10px;text-align:left;background:rgba(244,114,182,.08);color:#ffd6ec;cursor:pointer;font-size:13px}
+.rose-smart-note{padding:0 16px 8px;color:var(--ink-dim);font-size:11px}
+.rose-input-row{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--glass-border)}
+.rose-input-row textarea{flex:1;min-width:0;min-height:44px;max-height:140px;resize:none;padding:12px;border:1px solid var(--glass-border);border-radius:14px;background:rgba(0,0,0,.25);color:var(--ink);font:inherit;font-size:14px}
+.rose-send{width:44px;height:44px;border:0;border-radius:14px;background:linear-gradient(135deg,#f472b6,#7c5cff);color:white;font-size:22px;cursor:pointer}
+.rose-send:disabled{opacity:.45;cursor:default}
+.rose-greeting-toast{display:flex;align-items:center;gap:12px;border:1px solid var(--glass-border);border-radius:18px;background:var(--glass);padding:16px;margin-bottom:16px;animation:roseGreeting 400ms ease-out}
+.rose-greeting-toast p{flex:1;margin:0;color:var(--ink);line-height:1.5}
+.rose-greeting-toast button{background:transparent;border:0;color:var(--ink-dim);font-size:24px;cursor:pointer}
+@keyframes roseGreeting{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+.weekly-tile{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding:16px;border:1px solid transparent;border-radius:18px;background:linear-gradient(#161525,#161525) padding-box,linear-gradient(135deg,#f472b6,#7c5cff) border-box}
+.weekly-tile p{margin:6px 0 0;line-height:1.5;color:var(--ink)}
+.weekly-tile strong{color:#f9a8d4}
+.weekly-tile button{margin-left:auto;border:1px solid var(--glass-border);border-radius:12px;padding:10px;background:var(--glass);color:var(--ink);cursor:pointer;flex-shrink:0}
+@media(max-width:640px){.rose-panel{width:100vw;height:100vh;height:100dvh;max-width:none;max-height:none;bottom:0;right:0;border-radius:0}.rose-panel-header{padding-top:calc(12px + env(safe-area-inset-top))}.rose-input-row{padding-bottom:calc(12px + env(safe-area-inset-bottom))}.rose-input-row textarea{font-size:16px}.weekly-tile{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.rose-fab,.rose-loading,.rose-greeting-toast{animation:none}.rose-panel{transition:none}}

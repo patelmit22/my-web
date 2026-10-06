@@ -1,3 +1,8 @@
+import { mountRoseFab, renderRoseFab, unmountRoseFab, handleRoseAction } from './components/RoseFab';
+import { mountRoseGreeting, resetRoseGreeting } from './components/RoseGreeting';
+import { roseGreeting, roseWeekly } from './api/rose';
+import { subscribeWeekly, getWeekly, saveWeekly, markWeeklySeen } from './api/databaseApi';
+import { weekKeyForDate as isoWeekKey } from './utils/qotdDates';
 import { cleanAuthError, configureAuthPersistence, onAuthChanged, resolveCurrentUser, signIn, signOut } from './api/authApi';
 import {
   clearNextVisit as clearNextVisitApi,
@@ -6,9 +11,7 @@ import {
   deleteGame,
   deleteTask,
   deleteTransaction,
-  getWeekly,
   markQotdSeen,
-  markWeeklySeen,
   type DataMap,
   type DataPath,
   removeHerConfig,
@@ -21,7 +24,6 @@ import {
   saveTask,
   saveTimezoneConfig as saveTimezoneConfigApi,
   saveTransaction,
-  saveWeekly,
   subscribeHerConfig,
   subscribeNextVisit,
   subscribeList,
@@ -30,14 +32,12 @@ import {
   updateTaskColumn,
   voteQotd
 } from './api/databaseApi';
-import { roseChat, roseGreeting, roseWeekly } from './api/rose';
 import { ensureWorkoutProgramSeeded, saveWorkoutSession, subscribeWorkoutProgram, subscribeWorkoutSessions } from './api/workoutApi';
 import { renderSidebar } from './components/Sidebar';
 import { mountDistanceTile } from './components/DistanceTile';
 import { Lightbox } from './components/Lightbox';
 import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
-import { renderRoseFab } from './components/RoseFab';
 import { Toast } from './components/Toast';
 import { connectDrive, deleteDriveDoc, driveCacheAge, isDriveConnected, listDriveDocs, loadCachedDriveDocs, uploadDriveDoc, wasDriveConnected } from './api/driveApi';
 import { deleteStorageFile, getStorageFileUrl, uploadFunMedia } from './api/storageApi';
@@ -47,7 +47,6 @@ import type { AtlasEntry, AtlasSection, DriveOwner, FinanceKind, FunOwner, FunPa
 import { checked, formValue, morphHtml, morphNode, qs } from './utils/dom';
 import { debounce } from './utils/debounce';
 import { compressImageFile, compressImage, fileToPick, releasePicks, serializeMedia, type MediaPick } from './utils/media';
-import { isSunday, weekKeyForDate } from './utils/qotdDates';
 import { hasQotdAnswer } from './utils/qotdScore';
 import { DEFAULT_TIMEZONE_CONFIG, isValidTimezone, mergeTimezoneConfig } from './utils/timezones';
 import { dateFromSessionKey, dayTypeFor, sessionKey } from './utils/workoutSchedule';
@@ -90,30 +89,29 @@ export class DashboardApp {
       if (!user) {
         this.disposeDataSubscriptions();
         this.disposePageEffects();
-        state.currentUser = null;
-        state.weeklyActivity = null;
-        state.rosePanelOpen = false;
+        unmountRoseFab();
+        resetRoseGreeting();
         state.roseConvo = [];
-        state.roseInput = '';
-        state.roseBusy = false;
-        state.roseError = '';
         state.roseGreeting = '';
-        state.roseGreetingDismissed = false;
+        state.rosePanelOpen = false;
+        state.roseBusy = false;
+        state.weeklyActivity = null;
+        state.currentUser = null;
         this.renderAuth();
         return;
       }
       state.currentUser = await resolveCurrentUser(user.email || '');
       state.activePage = 'home';
-      this.resetRoseSession();
+      resetRoseGreeting();
       this.hydrateCachedData();
       this.renderApp();
+      mountRoseFab(state);
+      void this.loadRoseGreeting();
       this.replaceHistory('home');
       this.subscribeToData();
       if (state.currentUser.role === 'me') {
         void ensureWorkoutProgramSeeded().catch(error => this.showDataError('Train program', error));
       }
-      void this.loadRoseGreeting();
-      void this.ensureWeeklyActivity();
     });
   }
 
@@ -131,8 +129,7 @@ export class DashboardApp {
       ${renderSidebar(state.activePage, state.currentUser)}
       <main class="main">${this.renderCurrentPage()}</main>
     </div>
-    <div id="modal-root">${renderModals(state)}</div>
-    <div id="rose-root">${renderRoseFab(state)}</div>`);
+    <div id="modal-root">${renderModals(state)}</div>`);
     this.mountPageEffects();
   }
 
@@ -150,7 +147,6 @@ export class DashboardApp {
     this.syncSidebarActiveState();
     morphHtml(main, this.renderCurrentPage());
     morphHtml(modalRoot, renderModals(state));
-    this.renderRoseOnly();
     this.mountPageEffects();
   }
 
@@ -162,11 +158,12 @@ export class DashboardApp {
     }
     this.syncSidebarActiveState();
     morphHtml(main, this.renderCurrentPage());
-    this.renderRoseOnly();
     this.mountPageEffects();
   }
 
   private mountPageEffects(): void {
+    renderRoseFab(state);
+    mountRoseGreeting(state, () => this.renderMainOnly());
     this.disposePageEffects();
     if (state.activePage === 'home') this.pageCleanup = mountDistanceTile(document);
   }
@@ -184,22 +181,6 @@ export class DashboardApp {
       return;
     }
     morphHtml(modalRoot, renderModals(state));
-  }
-
-  private renderRoseOnly(focusInput = false): void {
-    const roseRoot = document.getElementById('rose-root');
-    if (!roseRoot) return;
-    morphHtml(roseRoot, renderRoseFab(state));
-    const messages = document.getElementById('rose-messages');
-    if (messages) messages.scrollTop = messages.scrollHeight;
-    if (focusInput) {
-      const input = document.getElementById('rose-input') as HTMLTextAreaElement | null;
-      if (input) {
-        input.focus();
-        input.selectionStart = input.value.length;
-        input.selectionEnd = input.value.length;
-      }
-    }
   }
 
   private syncSidebarActiveState(): void {
@@ -248,11 +229,6 @@ export class DashboardApp {
       if (target.id === 'qotd-draft') {
         state.qotdDraft = (target as HTMLTextAreaElement).value;
       }
-      if (target.id === 'rose-input') {
-        state.roseInput = (target as HTMLTextAreaElement).value;
-        const send = document.querySelector<HTMLButtonElement>('.rose-send');
-        if (send) send.disabled = state.roseBusy || !state.roseInput.trim();
-      }
       if (target instanceof HTMLInputElement && target.classList.contains('doc-rename-input')) {
         const index = Number(target.dataset.docIndex || -1);
         if (index >= 0) state.docFileNames[index] = target.value;
@@ -275,19 +251,10 @@ export class DashboardApp {
 
     document.addEventListener('keydown', event => {
       const target = event.target as HTMLElement;
-      if (target.id === 'rose-input' && event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        void this.sendRose();
-        return;
-      }
       if (event.key === 'Escape') {
         document.querySelectorAll('.modal-backdrop.open').forEach(modal => closeModal(modal.id));
         this.lightbox.close();
         this.closeFunViewer();
-        if (state.rosePanelOpen) {
-          state.rosePanelOpen = false;
-          this.renderRoseOnly();
-        }
       }
     });
 
@@ -392,37 +359,27 @@ export class DashboardApp {
       case 'save-qotd':
         await this.saveQotd();
         break;
-      case 'toggle-rose':
-        state.rosePanelOpen = !state.rosePanelOpen;
-        state.roseError = '';
-        this.renderRoseOnly(state.rosePanelOpen);
-        break;
+      case 'open-rose':
       case 'close-rose':
-        state.rosePanelOpen = false;
-        this.renderRoseOnly();
-        break;
       case 'clear-rose':
-        state.roseConvo = [];
-        state.roseInput = '';
-        state.roseError = '';
-        this.renderRoseOnly(true);
-        break;
-      case 'rose-quick':
-        state.roseInput = target.dataset.prompt || '';
-        state.rosePanelOpen = true;
-        state.roseError = '';
-        this.renderRoseOnly(true);
-        break;
       case 'send-rose':
-        await this.sendRose();
+      case 'rose-quick':
+      case 'rose-model-toggle':
+        await handleRoseAction(state, target);
         break;
-      case 'dismiss-rose-greeting':
-        state.roseGreetingDismissed = true;
+      case 'dismiss-greeting':
+        state.roseGreeting = '';
         this.renderMainOnly();
         break;
-      case 'love-weekly':
-        await this.loveWeeklyActivity();
+      case 'rose-weekly-seen': {
+        const week = state.weeklyActivity;
+        const role = state.currentUser?.role;
+        if (week && role) {
+          try { await markWeeklySeen(week.weekKey, role); }
+          catch { this.toast.show('activity did not save', 'err'); }
+        }
         break;
+      }
       case 'edit-next-visit':
         this.navigate('settings');
         window.requestAnimationFrame(() => document.getElementById('next-visit-date')?.focus());
@@ -703,6 +660,11 @@ export class DashboardApp {
   }
 
   private subscribeToData(): void {
+    this.unsubs.push(subscribeWeekly(w => {
+      state.weeklyActivity = w;
+      if (state.activePage === 'home') this.renderMainOnly();
+    }));
+    void this.ensureRoseWeekly();
     this.disposeDataSubscriptions();
     const rerenderSettings = debounce(() => {
       if (state.activePage === 'settings') this.renderMainOnly();
@@ -1762,16 +1724,30 @@ export class DashboardApp {
     return kind === 'spending' || kind === 'subway_expense' ? 'out' : 'in';
   }
 
-  private resetRoseSession(): void {
-    const display = state.currentUser?.display || 'there';
-    state.weeklyActivity = null;
-    state.rosePanelOpen = false;
-    state.roseConvo = [];
-    state.roseInput = '';
-    state.roseBusy = false;
-    state.roseError = '';
-    state.roseGreeting = `hi ${display.toLowerCase()}. good to see you. 🌹`;
-    state.roseGreetingDismissed = false;
+  private async loadRoseGreeting(): Promise<void> {
+    const user = state.currentUser;
+    if (!user) return;
+    const now = new Date();
+    let text: string;
+    try { text = await roseGreeting(user.display, now.getHours(), now.toLocaleDateString('en-US', { weekday: 'long' })); }
+    catch { text = `hi ${user.display.toLowerCase()}. good to see you.`; }
+    if (state.currentUser !== user) return;
+    state.roseGreeting = text;
+    if (state.activePage === 'home') this.renderMainOnly();
+  }
+
+  private async ensureRoseWeekly(): Promise<void> {
+    const now = new Date();
+    const user = state.currentUser;
+    if (now.getDay() !== 0 || !user) return;
+    const weekKey = isoWeekKey(now);
+    try {
+      const existing = await getWeekly(weekKey);
+      if (!existing && state.currentUser === user) {
+        const text = await roseWeekly();
+        if (state.currentUser === user) await saveWeekly(weekKey, text);
+      }
+    } catch (error) { console.warn('rose weekly failed', error); }
   }
 
   private async markTodayQotdSeen(): Promise<void> {
@@ -1788,79 +1764,6 @@ export class DashboardApp {
     }
   }
 
-  private async loadRoseGreeting(): Promise<void> {
-    const user = state.currentUser;
-    if (!user) return;
-    try {
-      const text = await roseGreeting(user.display, user.role);
-      if (text.trim()) {
-        state.roseGreeting = text.trim();
-        if (state.activePage === 'home') this.renderMainOnly();
-      }
-    } catch (error) {
-      console.warn('Rose greeting unavailable', error);
-    }
-  }
-
-  private async ensureWeeklyActivity(): Promise<void> {
-    const weekKey = weekKeyForDate();
-    try {
-      const existing = await getWeekly(weekKey);
-      if (existing) {
-        state.weeklyActivity = existing;
-      } else if (isSunday()) {
-        const suggestion = await roseWeekly();
-        await saveWeekly(weekKey, suggestion);
-        state.weeklyActivity = {
-          weekKey,
-          suggestion,
-          createdAt: new Date().toISOString(),
-          seenBy: { me: false, her: false }
-        };
-      }
-      if (state.activePage === 'home') this.renderMainOnly();
-    } catch (error) {
-      console.warn('Rose weekly activity unavailable', error);
-    }
-  }
-
-  private async loveWeeklyActivity(): Promise<void> {
-    const role = state.currentUser?.role;
-    const week = state.weeklyActivity;
-    if (!role || !week) return;
-    try {
-      await markWeeklySeen(week.weekKey, role);
-      state.weeklyActivity = {
-        ...week,
-        seenBy: { ...(week.seenBy || {}), [role]: true }
-      };
-      this.renderMainOnly();
-    } catch (error) {
-      console.error('Could not mark Rose weekly activity seen', error);
-      this.toast.show('Rose activity did not save', 'err');
-    }
-  }
-
-  private async sendRose(): Promise<void> {
-    const text = state.roseInput.trim();
-    if (!text || state.roseBusy) return;
-    state.roseConvo = [...state.roseConvo, { role: 'user', content: text }];
-    state.roseInput = '';
-    state.roseBusy = true;
-    state.roseError = '';
-    state.rosePanelOpen = true;
-    this.renderRoseOnly();
-    try {
-      const reply = await roseChat(state.roseConvo, state.activePage);
-      state.roseConvo = [...state.roseConvo, { role: 'assistant', content: reply }];
-    } catch (error) {
-      console.error('Rose chat failed', error);
-      state.roseError = error instanceof Error ? error.message : 'rose is unavailable right now';
-    } finally {
-      state.roseBusy = false;
-      this.renderRoseOnly(true);
-    }
-  }
 }
 
 function storeLabel(store?: Transaction['store']): string {

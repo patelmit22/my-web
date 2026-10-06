@@ -1,4 +1,6 @@
-import type { AtlasEntry, FunPack, Game, HerConfig, NextVisit, QotdAnswer, QotdCategory, QotdDay, TimezoneConfig, Transaction, UserRole, WeeklyActivity, WorkTask } from '../types/models';
+import type { WeeklyActivity } from '../types/models';
+import { weekKeyForDate } from '../utils/qotdDates';
+import type { AtlasEntry, FunPack, Game, HerConfig, NextVisit, QotdAnswer, QotdCategory, QotdDay, TimezoneConfig, Transaction, UserRole, WorkTask } from '../types/models';
 import { db } from './firebaseClient';
 
 export type DataPath = 'entries' | 'txns' | 'tasks' | 'games' | 'funPacks' | 'qotd';
@@ -159,25 +161,6 @@ export function voteQotd(dateKey: string, voter: UserRole, active: boolean): Pro
   return db.ref(`qotd/${dateKey}/votes/${field}`).set(active);
 }
 
-export async function getWeekly(weekKey: string): Promise<WeeklyActivity | null> {
-  const snap = await db.ref(`weekly/${weekKey}`).once('value');
-  const value = snap.val();
-  return value ? normalizeWeekly(weekKey, value) : null;
-}
-
-export function saveWeekly(weekKey: string, suggestion: string): Promise<void> {
-  return db.ref(`weekly/${weekKey}`).set({
-    weekKey,
-    suggestion,
-    createdAt: new Date().toISOString(),
-    seenBy: { me: false, her: false }
-  });
-}
-
-export function markWeeklySeen(weekKey: string, role: UserRole): Promise<void> {
-  return db.ref(`weekly/${weekKey}/seenBy/${role}`).set(true);
-}
-
 export async function getHerConfig(): Promise<HerConfig | null> {
   const snap = await db.ref('config/her').once('value');
   return snap.val();
@@ -238,11 +221,25 @@ function normalizeQotdAnswer(value: unknown): QotdAnswer | null {
   };
 }
 
-function normalizeWeekly(weekKey: string, value: Partial<WeeklyActivity>): WeeklyActivity {
-  return {
-    weekKey: value.weekKey || weekKey,
-    suggestion: value.suggestion || '',
-    createdAt: value.createdAt || '',
-    seenBy: value.seenBy || {}
-  };
+
+export function subscribeWeekly(cb: (w: WeeklyActivity | null) => void): () => void {
+  const ref = db.ref(`weekly/${weekKeyForDate()}`);
+  const listener = ref.on('value', snap => cb(snap.val()));
+  return () => ref.off('value', listener);
+}
+
+export async function getWeekly(weekKey: string): Promise<WeeklyActivity | null> {
+  const snap = await db.ref(`weekly/${weekKey}`).once('value');
+  return snap.val();
+}
+
+export async function saveWeekly(weekKey: string, suggestion: string): Promise<void> {
+  // Concurrent logins must not overwrite an existing suggestion or its seen flags.
+  await db.ref(`weekly/${weekKey}`).transaction(existing => existing || {
+    weekKey, suggestion, createdAt: new Date().toISOString(), seenBy: { me: false, her: false }
+  });
+}
+
+export async function markWeeklySeen(weekKey: string, role: 'me' | 'her'): Promise<void> {
+  await db.ref(`weekly/${weekKey}/seenBy/${role}`).set(true);
 }

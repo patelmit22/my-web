@@ -1,26 +1,26 @@
-import type { Config } from '@netlify/functions';
-import { jsonResponse, roseText } from './_shared/rose';
+import type { Handler } from '@netlify/functions';
+import { ROSE_SYSTEM } from './_rose-personality';
 
-export default async (req: Request): Promise<Response> => {
-  if (req.method !== 'POST') return jsonResponse({ error: 'method not allowed' }, 405);
-
-  try {
-    const body = await req.json() as { display?: string; role?: string; hour?: number; weekday?: string };
-    const display = body.display || 'love';
-    const hour = Number.isFinite(body.hour) ? body.hour : new Date().getHours();
-    const weekday = body.weekday || new Date().toLocaleDateString('en-US', { weekday: 'long' });
-    const text = await roseText([{
-      role: 'user',
-      content: `write a warm 1-2 sentence login greeting for ${display}. role=${body.role || 'me'}, hour=${hour}, weekday=${weekday}. mention one small dashboard thing they might enjoy today.`
-    }], 180);
-
-    return jsonResponse({ text });
-  } catch (error) {
-    console.error('Rose greeting failed', error);
-    return jsonResponse({ error: error instanceof Error ? error.message : 'Rose greeting unavailable.' }, 500);
+export const handler: Handler = async event => {
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'method not allowed' };
+  if (!process.env.ANTHROPIC_API_KEY) return { statusCode: 500, body: 'rose is unavailable right now' };
+  let body: { display?: string; hour?: number; weekday?: string };
+  try { body = JSON.parse(event.body || '{}'); }
+  catch { return { statusCode: 400, body: 'invalid json' }; }
+  if (!body || typeof body.display !== 'string' || typeof body.hour !== 'number' || typeof body.weekday !== 'string') {
+    return { statusCode: 400, body: 'display, hour and weekday required' };
   }
-};
-
-export const config: Config = {
-  method: ['POST']
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 200, system: ROSE_SYSTEM,
+        messages: [{ role: 'user', content: `produce ONE short warm greeting for ${body.display} at hour ${body.hour} on ${body.weekday}. one or two sentences, lowercase, no quotes.` }] })
+    });
+    if (!resp.ok) return { statusCode: 502, body: 'rose is unavailable right now' };
+    const json = await resp.json();
+    const text = json.content?.filter((block: { type: string; text?: string }) => block.type === 'text').map((block: { text: string }) => block.text).join('\n') ?? '';
+    if (!text.trim()) return { statusCode: 502, body: 'rose did not send a reply' };
+    return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) };
+  } catch { return { statusCode: 502, body: 'rose is unavailable right now' }; }
 };

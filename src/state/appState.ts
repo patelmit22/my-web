@@ -1,8 +1,15 @@
-import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, NextVisit, PageId, QotdDay, QotdScoreView, RoseMessage, RoseModelChoice, TimezoneConfig, Transaction, WeeklyActivity, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from '../types/models';
+import type { RoseMessage, RoseModel, WeeklyActivity } from '../types/models';
+import type { AtlasEntry, AtlasSection, CurrentUser, DriveDoc, DriveOwner, FinanceKind, FunOwner, FunPack, Game, HerConfig, NextVisit, PageId, QotdDay, QotdScoreView, TimezoneConfig, Transaction, WorkTask, WorkoutDayType, WorkoutProgramDay, WorkoutSession } from '../types/models';
 import type { MediaPick } from '../utils/media';
 import { DEFAULT_TIMEZONE_CONFIG } from '../utils/timezones';
 
 export interface AppState {
+  rosePanelOpen: boolean;
+  roseConvo: RoseMessage[];
+  roseBusy: boolean;
+  roseGreeting: string;
+  roseModel: RoseModel;
+  weeklyActivity: WeeklyActivity | null;
   currentUser: CurrentUser | null;
   activePage: PageId;
   atlasSection: AtlasSection;
@@ -35,15 +42,6 @@ export interface AppState {
   qotdDays: QotdDay[];
   qotdDraft: string;
   qotdScoreView: QotdScoreView;
-  weeklyActivity: WeeklyActivity | null;
-  rosePanelOpen: boolean;
-  roseConvo: RoseMessage[];
-  roseModel: RoseModelChoice;
-  roseInput: string;
-  roseBusy: boolean;
-  roseError: string;
-  roseGreeting: string;
-  roseGreetingDismissed: boolean;
   lightboxUrls: string[];
   lightboxIndex: number;
   herConfig: HerConfig | null;
@@ -61,6 +59,12 @@ export interface AppState {
 }
 
 export const state: AppState = {
+  rosePanelOpen: false,
+  roseConvo: [],
+  roseBusy: false,
+  roseGreeting: '',
+  roseModel: 'haiku',
+  weeklyActivity: null,
   currentUser: null,
   activePage: 'home',
   atlasSection: 'stories',
@@ -93,15 +97,6 @@ export const state: AppState = {
   qotdDays: [],
   qotdDraft: '',
   qotdScoreView: 'week',
-  weeklyActivity: null,
-  rosePanelOpen: false,
-  roseConvo: [],
-  roseModel: 'fast',
-  roseInput: '',
-  roseBusy: false,
-  roseError: '',
-  roseGreeting: '',
-  roseGreetingDismissed: false,
   lightboxUrls: [],
   lightboxIndex: 0,
   herConfig: null,

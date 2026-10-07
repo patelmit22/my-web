@@ -54,7 +54,7 @@ export function renderEntriesList(state: AppState, list = filteredEntries(state)
   if (!list.length) {
     return '<div class="empty-state">nothing yet — hit + write to add the first</div>';
   }
-  return list.map(entry => `<div class="entry">
+  return list.map(entry => `<div class="entry" data-entry-id="${entry.id}" tabindex="-1">
     <div class="e-head"><span class="e-who ${entry.who}">${entry.who === 'me' ? 'Me' : 'Her'}</span><span class="e-date">${fmtDate(entry.date)}</span></div>
     <div class="e-title">${esc(entry.title)}</div><div class="e-body">${esc(entry.body)}</div>
     ${renderMedia(entry)}

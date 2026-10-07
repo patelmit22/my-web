@@ -1,13 +1,9 @@
 import { renderRoseGreeting } from '../components/RoseGreeting';
-import { esc } from '../utils/sanitize';
 import type { AppState } from '../state/appState';
 import type { FinanceKind, Transaction } from '../types/models';
-import { renderDistanceTile } from '../components/DistanceTile';
 import { currency, greetingTime } from '../utils/format';
-import { localDateKey, questionForDate } from '../data/qotdQuestions';
-import { hasQotdAnswer } from '../utils/qotdScore';
-import { DEFAULT_WORKOUT_PROGRAM } from '../data/workoutProgram';
-import { dateFromSessionKey, dayTypeFor, sessionKey } from '../utils/workoutSchedule';
+import { esc } from '../utils/sanitize';
+import { localDateKey } from '../data/qotdQuestions';
 
 function kindOf(txn: Transaction): FinanceKind {
   return txn.kind || (txn.type === 'out' ? 'spending' : 'general');
@@ -15,132 +11,86 @@ function kindOf(txn: Transaction): FinanceKind {
 
 export function renderHomePage(state: AppState): string {
   const greeting = greetingTime();
-  const month = new Date().getMonth();
-  const year = new Date().getFullYear();
-  const monthTxns = state.txns.filter(t => {
-    const date = new Date(t.date);
-    return date.getMonth() === month && date.getFullYear() === year;
-  });
-  const personalTxns = state.txns.filter(txn => {
-    const kind = kindOf(txn);
-    return kind === 'option' || kind === 'spending' || kind === 'general';
-  });
-  const personalBalance = personalTxns.reduce((sum, txn) => sum + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
-  const monthIn = monthTxns
-    .filter(txn => txn.type === 'in' && (kindOf(txn) === 'option' || kindOf(txn) === 'general'))
-    .reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
-  const monthOut = monthTxns
-    .filter(txn => txn.type === 'out' && (kindOf(txn) === 'spending' || kindOf(txn) === 'general'))
-    .reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
-  const openTasks = state.tasks.filter(task => task.col !== 'done').length;
-  const doneTasks = state.tasks.filter(task => task.col === 'done').length;
-  const playing = state.games.filter(game => game.status === 'playing').length;
-  const latestStory = state.entries[0]?.title || 'no story yet';
-  const currentGame = state.games.find(game => game.now)?.name || state.games.find(game => game.status === 'playing')?.name || 'pick a game';
-  const storyCount = state.entries.length;
-  const driveCount = state.driveDocs.length;
-  const todayKey = localDateKey();
-  const todayUs = state.qotdDays.find(day => day.date === todayKey);
-  const usAnswered = Boolean(todayUs && hasQotdAnswer(todayUs.me) && hasQotdAnswer(todayUs.her));
-  const usQuestion = todayUs?.q || questionForDate(todayKey).q;
-  const workoutDateKey = sessionKey();
-  const workoutType = dayTypeFor(dateFromSessionKey(workoutDateKey));
-  const workoutDay = (state.workoutProgram || DEFAULT_WORKOUT_PROGRAM)[workoutType];
-  const workoutSession = state.workoutSessions.find(item => item.date === workoutDateKey);
-  const workoutTotal = workoutType === 'rest' ? 0 : (workoutDay.exercises || []).length;
-  const workoutDone = workoutSession ? Object.values(workoutSession.completed || {}).filter(Boolean).length : 0;
-  const workoutStat = workoutType === 'rest' ? 'rest day today' : `${workoutDone}/${workoutTotal} done today`;
-  const vibe = monthIn > 0
-    ? 'money day'
-    : openTasks > 0
-      ? 'mission mode'
-      : playing > 0
-        ? 'game night'
-        : 'quiet dashboard';
-  const vibeLine = monthIn > 0
-    ? `${currency(monthIn)} personal income logged this month`
-    : openTasks > 0
-      ? `${openTasks} work ${openTasks === 1 ? 'task' : 'tasks'} waiting`
-      : playing > 0
-        ? `${playing} game${playing === 1 ? '' : 's'} in progress`
-        : 'write a story, add a game, or save a document';
+  const display = state.currentUser?.display || 'Mit';
+  const balance = state.txns
+    .filter(txn => ['option', 'spending', 'general'].includes(kindOf(txn)))
+    .reduce((sum, txn) => sum + (txn.type === 'in' ? Number(txn.amount) : -Number(txn.amount) || 0), 0);
+  const latestStory = state.entries
+    .filter(entry => !entry.section || entry.section === 'stories')
+    .slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  const visit = state.nextVisit && /^\d{4}-\d{2}-\d{2}$/.test(state.nextVisit.date) && state.nextVisit.date >= localDateKey()
+    ? state.nextVisit : null;
+  const visitDate = visit ? new Date(`${visit.date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
-  return `<section class="page active" id="page-home">
+  return `<section class="page active home-page" id="page-home" data-period="${greeting.label === 'morning' ? 'morning' : 'evening'}">
+    <div class="bg-dotgrid" aria-hidden="true"></div>
+    <div class="bg-orb bg-orb--a" aria-hidden="true"></div>
+    <div class="bg-orb bg-orb--b" aria-hidden="true"></div>
+    <div class="bg-grain" aria-hidden="true"></div>
+    <header class="home-header">
+      <div class="brand"><div class="brand__badge">MP</div><span class="brand__label">mitpatel.family</span></div>
+      <div class="header-actions">
+        <button type="button" class="glass balance-pill" data-bind="balance" data-action="nav" data-page="finance" aria-label="Balance ${currency(balance)} — open Money">${currency(balance)}</button>
+        <button type="button" class="glass icon-btn" data-action="nav" data-page="settings" aria-label="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.09a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 0 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
+        </button>
+      </div>
+    </header>
     ${renderRoseGreeting(state)}
-    <div class="hero home-hero">
-      <div class="home-hero-copy">
-        <div class="home-kicker">mitpatel.family dashboard</div>
-        <div class="hero-greet">good <span id="tod">${greeting.label}</span>, <span class="name" id="hello-name">${state.currentUser?.display.toLowerCase() || 'mit'}</span></div>
-        <div class="hero-sub">your command center for money, work, memories, games, and Drive documents.</div>
-        <div class="hero-time" id="now-time">${greeting.timestamp}</div>
+    <section class="hero rise">
+      <div class="avatar" aria-hidden="true">${esc(display.charAt(0).toUpperCase())}</div>
+      <div class="hero__text">
+        <h1 class="hero__title"><span data-bind="greeting">Good ${greeting.label}</span>, <span class="hero__name">${esc(display)}</span>.</h1>
+        <p class="hero__subtitle">A quiet home for your days, your people, and everything worth keeping.</p>
+        <p class="hero__quote">&quot;Small things, done daily, add up.&quot;</p>
+        <div class="hero__meta"><span class="hero__datetime" data-bind="datetime">${esc(greeting.timestamp)}</span></div>
       </div>
-      <div class="home-orbit" aria-hidden="true">
-        <span class="orbit-card orbit-money">${currency(personalBalance)}</span>
-        <span class="orbit-core">mp</span>
-        <span class="orbit-card orbit-work">${openTasks} work open</span>
+    </section>
+    <section class="feature-row">
+      <div class="glass rise feature-card feature-card--story">
+        <div class="feature-card__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fde68a" stroke-width="1.8" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+        <div class="feature-card__body">
+          <div class="feature-card__label">LATEST STORY</div>
+          <div class="feature-card__title ${latestStory ? '' : 'feature-card__title--muted'}" data-bind="latest-story-title">${esc(latestStory?.title || 'No stories yet')}</div>
+          <a href="#atlas" class="feature-card__link" data-bind="latest-story-link" data-action="home-story" ${latestStory ? `data-id="${latestStory.id}"` : ''}>${latestStory ? 'Read it again →' : '+ Write one →'}</a>
+        </div>
       </div>
-    </div>
-    <div class="home-status-grid" id="home-status-grid">
-      <div class="home-status"><span>personal income</span><strong id="home-personal-income">${currency(monthIn)}</strong></div>
-      <div class="home-status"><span>personal spent</span><strong id="home-personal-spent" class="danger">${currency(monthOut)}</strong></div>
-      <div class="home-status"><span>latest story</span><strong id="home-latest-story">${latestStory}</strong></div>
-      <div class="home-status"><span>now playing</span><strong id="home-now-playing">${currentGame}</strong></div>
-    </div>
-    <div class="home-focus-strip">
-      <div class="home-focus-card">
-        <span>today's pulse</span>
-        <strong>${vibe}</strong>
-        <small>${vibeLine}</small>
+      <div class="glass rise feature-card feature-card--upcoming">
+        <div class="feature-card__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+        <div class="feature-card__body">
+          <div class="feature-card__label">UPCOMING</div>
+          <div class="feature-card__title ${visit ? '' : 'feature-card__title--muted'}" data-bind="upcoming-title">${visit ? esc(visit.note?.trim() || 'Next visit') : 'Nothing scheduled yet'}</div>
+          ${visit ? `<div class="feature-card__date">${esc(visitDate)}</div>` : ''}
+          <a href="#settings" class="feature-card__link feature-card__link--blue" data-bind="upcoming-link" data-action="edit-next-visit">${visit ? 'View plans →' : '+ Add one →'}</a>
+        </div>
       </div>
-      <div class="home-focus-actions">
-        <button data-action="nav" data-page="atlas">write story</button>
-        <button data-action="nav" data-page="work">open work</button>
-        <button data-action="nav" data-page="games">game shelf</button>
-      </div>
-      <div class="home-mini-stats">
-        <span>${storyCount} stories</span>
-        <span>${usAnswered ? 'us answered' : 'us waiting'}</span>
-        <span>${driveCount} docs</span>
-        <span>${doneTasks} done</span>
-      </div>
-    </div>
-    ${renderDistanceTile(state)}
+    </section>
     ${renderRoseWeekly(state)}
-    <div class="tiles">
-      <button class="tile tile-finance" data-action="nav" data-page="finance">
-        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 0 010 7H6"/></svg></div>
-        <div class="tile-name">Finance</div><div class="tile-desc">income, spend, balance</div><div class="tile-stat" id="tile-finance-summary">${currency(personalBalance)} personal balance</div>
-      </button>
-      <button class="tile tile-work" data-action="nav" data-page="work">
-        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M16 4v16"/></svg></div>
-        <div class="tile-name">Work board</div><div class="tile-desc">to-do, doing, done</div><div class="tile-stat" id="tile-work-summary">${openTasks} open · ${doneTasks} done</div>
-      </button>
-      <button class="tile tile-atlas" data-action="nav" data-page="atlas">
-        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h12a3 3 0 013 3v13a2 2 0 00-2-2H4z"/><path d="M4 4v16"/></svg></div>
-        <div class="tile-name">Atlas</div><div class="tile-desc">our stories &amp; memories</div><div class="tile-stat" id="tile-atlas-count">${state.entries.length} ${state.entries.length === 1 ? 'entry' : 'entries'}</div>
-      </button>
-      <button class="tile tile-games" data-action="nav" data-page="games">
-        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="11" rx="3"/><path d="M7 12h3M8.5 10.5v3M14 11h.01M17 13h.01"/></svg></div>
-        <div class="tile-name">Games</div><div class="tile-desc">what i'm playing</div><div class="tile-stat" id="tile-games-summary">${state.games.length} total · ${playing} playing</div>
-      </button>
-      <button class="tile tile-us" data-action="nav" data-page="us">
-        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg></div>
-        <div class="tile-name">Us</div><div class="tile-desc">daily question together</div><div class="tile-stat" id="tile-us-summary">${usAnswered ? 'revealed today' : usQuestion}</div>
-      </button>
-      ${state.currentUser?.role === 'me' ? `<button class="tile tile-train" data-action="nav" data-page="train">
-        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M7 12h10"/></svg></div>
-        <div class="tile-name">Train</div><div class="tile-desc">push, pull, legs</div><div class="tile-stat" id="tile-train-summary">${workoutStat}</div>
-      </button>` : ''}
-      <button class="tile tile-documents" data-action="nav" data-page="documents">
-        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg></div>
-        <div class="tile-name">Documents</div><div class="tile-desc">Google Drive locker</div><div class="tile-stat" id="tile-documents-summary">${state.driveDocs.length} loaded</div>
-      </button>
-      <button class="tile tile-fun" data-action="nav" data-page="fun">
-        <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 13l2.5-3 2 2.5 1.5-1.8L18 16H6z"/><circle cx="8" cy="9" r="1"/></svg></div>
-        <div class="tile-name">Fun vault</div><div class="tile-desc">photos, videos, Firebase</div><div class="tile-stat" id="tile-fun-summary">${state.funPacks.length} saved</div>
-      </button>
-    </div>
+    <section class="tile-grid" aria-label="Your dashboard">
+      <a href="#finance" data-action="nav" data-page="finance" class="glass rise tile tile--money"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#86efac" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10h6M9.5 14h5"/></svg><span>Money</span></a>
+      <a href="#work" data-action="nav" data-page="work" class="glass rise tile tile--work"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg><span>Work</span></a>
+      <a href="#games" data-action="nav" data-page="games" class="glass rise tile tile--games"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d8b4fe" stroke-width="1.8" aria-hidden="true"><rect x="2" y="8" width="20" height="8" rx="4"/><path d="M6 12h2m-1-1v2"/><circle cx="16" cy="11" r="0.6" fill="#d8b4fe"/><circle cx="18" cy="13" r="0.6" fill="#d8b4fe"/></svg><span>Games</span></a>
+      <a href="#documents" data-action="nav" data-page="documents" class="glass rise tile tile--documents"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.8" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg><span>Documents</span></a>
+    </section>
+    <div class="bottom-vignette" aria-hidden="true"></div>
   </section>`;
+}
+
+/** Refresh the existing greeting and color variant without replaying entrance animations. */
+export function mountHomePage(root: ParentNode = document): () => void {
+  const update = () => {
+    const page = root.querySelector<HTMLElement>('.home-page');
+    if (!page) return;
+    const greeting = greetingTime();
+    page.dataset.period = greeting.label === 'morning' ? 'morning' : 'evening';
+    const label = page.querySelector('[data-bind="greeting"]');
+    const datetime = page.querySelector('[data-bind="datetime"]');
+    if (label) label.textContent = `Good ${greeting.label}`;
+    if (datetime) datetime.textContent = greeting.timestamp;
+  };
+  update();
+  const timer = window.setInterval(update, 60000);
+  return () => window.clearInterval(timer);
 }
 
 function renderRoseWeekly(state: AppState): string {

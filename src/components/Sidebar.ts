@@ -17,7 +17,7 @@ function icon(name: PageId | 'settings'): string {
 }
 
 function navItem(page: PageId | 'settings', label: string, active: PageId, hidden = false): string {
-  return `<button class="sb-item ${active === page ? 'active' : ''} ${hidden ? 'is-hidden' : ''}" data-action="nav" data-page="${page}">
+  return `<button class="sb-item ${active === page ? 'active' : ''} ${hidden ? 'is-hidden' : ''}" data-action="nav" data-page="${page}" aria-label="${label}" ${active === page ? 'aria-current="page"' : ''}>
     ${icon(page)}
     <span class="sb-tooltip">${label}</span>
   </button>`;
@@ -30,13 +30,14 @@ export function renderSidebar(active: PageId, user: CurrentUser): string {
       ${navItem('home', 'Home', active)}
       ${navItem('finance', 'Finance', active)}
       ${navItem('work', 'Work board', active)}
-      ${navItem('atlas', 'Atlas', active)}
       ${navItem('games', 'Games', active)}
-      ${navItem('us', 'Us', active)}
       ${user.role === 'me' ? navItem('train', 'Train', active) : ''}
       ${navItem('documents', 'Documents', active)}
-      ${navItem('fun', 'Fun vault', active)}
       ${navItem('settings', 'Settings', active, user.role !== 'me')}
+      <div class="sb-divider" role="separator" aria-label="Personal tabs"></div>
+      ${navItem('atlas', 'Atlas', active)}
+      ${navItem('us', 'Us', active)}
+      ${navItem('fun', 'Fun vault', active)}
     </nav>
     <div class="sb-bottom">
       <button class="sb-avatar ${user.role === 'her' ? 'her' : ''}" title="sign out" data-action="signout">${user.display[0].toUpperCase()}</button>

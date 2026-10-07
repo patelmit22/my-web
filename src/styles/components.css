@@ -90,7 +90,7 @@
 .rose-fab:hover{animation:none;transform:scale(1.08)}
 .rose-logo{width:34px;height:34px;object-fit:contain;flex-shrink:0}
 @keyframes rosePulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.05);opacity:.88}}
-.rose-panel{position:fixed;bottom:96px;right:24px;z-index:1001;width:380px;height:600px;max-height:calc(100dvh - 120px);max-width:calc(100vw - 48px);display:flex;flex-direction:column;overflow:hidden;border-radius:22px;border:1px solid var(--glass-border);background:linear-gradient(160deg,rgba(30,23,45,.98),rgba(10,12,23,.98));box-shadow:0 24px 80px rgba(0,0,0,.5);transform:translateY(16px);opacity:0;visibility:hidden;pointer-events:none;transition:transform 220ms cubic-bezier(.4,0,.2,1),opacity 220ms cubic-bezier(.4,0,.2,1),visibility 220ms}
+.rose-panel{position:fixed;bottom:96px;right:24px;z-index:1001;width:540px;height:600px;max-height:calc(100dvh - 120px);max-width:calc(100vw - 48px);display:flex;flex-direction:column;overflow:hidden;border-radius:22px;border:1px solid var(--glass-border);background:linear-gradient(160deg,rgba(30,23,45,.98),rgba(10,12,23,.98));box-shadow:0 24px 80px rgba(0,0,0,.5);transform:translateY(16px);opacity:0;visibility:hidden;pointer-events:none;transition:transform 220ms cubic-bezier(.4,0,.2,1),opacity 220ms cubic-bezier(.4,0,.2,1),visibility 220ms}
 .rose-panel.open{transform:translateY(0);opacity:1;visibility:visible;pointer-events:auto}
 .rose-panel-header{display:flex;align-items:center;gap:6px;padding:12px;border-bottom:1px solid var(--glass-border);flex-shrink:0}
 .rose-brand{display:flex;align-items:center;gap:6px;margin-right:auto;color:var(--ink);font-family:var(--font-ui)}
@@ -123,3 +123,5 @@
 .weekly-tile button{margin-left:auto;border:1px solid var(--glass-border);border-radius:12px;padding:10px;background:var(--glass);color:var(--ink);cursor:pointer;flex-shrink:0}
 @media(max-width:640px){.rose-panel{width:100vw;height:100vh;height:100dvh;max-width:none;max-height:none;bottom:0;right:0;border-radius:0}.rose-panel-header{padding-top:calc(12px + env(safe-area-inset-top))}.rose-input-row{padding-bottom:calc(12px + env(safe-area-inset-bottom))}.rose-input-row textarea{font-size:16px}.weekly-tile{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.rose-fab,.rose-loading,.rose-greeting-toast{animation:none}.rose-panel{transition:none}}
+/* Keep the floating control clear of the mobile navigation tabs. */
+@media(max-width:720px){.rose-fab{bottom:calc(88px + env(safe-area-inset-bottom))}}

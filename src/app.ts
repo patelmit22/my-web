@@ -34,7 +34,7 @@ import {
 } from './api/databaseApi';
 import { ensureWorkoutProgramSeeded, saveWorkoutSession, subscribeWorkoutProgram, subscribeWorkoutSessions } from './api/workoutApi';
 import { renderSidebar } from './components/Sidebar';
-import { mountDistanceTile } from './components/DistanceTile';
+import { mountHomePage } from './pages/HomePage';
 import { Lightbox } from './components/Lightbox';
 import { openModal, closeModal } from './components/Modal';
 import { renderModals } from './components/Modals';
@@ -165,7 +165,7 @@ export class DashboardApp {
     renderRoseFab(state);
     mountRoseGreeting(state, () => this.renderMainOnly());
     this.disposePageEffects();
-    if (state.activePage === 'home') this.pageCleanup = mountDistanceTile(document);
+    if (state.activePage === 'home') this.pageCleanup = mountHomePage(document);
   }
 
   private disposePageEffects(): void {
@@ -186,6 +186,8 @@ export class DashboardApp {
   private syncSidebarActiveState(): void {
     document.querySelectorAll<HTMLElement>('.sb-item[data-page]').forEach(item => {
       item.classList.toggle('active', item.dataset.page === state.activePage);
+      if (item.dataset.page === state.activePage) item.setAttribute('aria-current', 'page');
+      else item.removeAttribute('aria-current');
     });
   }
 
@@ -318,6 +320,24 @@ export class DashboardApp {
       case 'nav':
         this.navigate(target.dataset.page as PageId);
         break;
+      case 'home-story': {
+        const entry = state.entries.find(item => String(item.id) === target.dataset.id);
+        state.atlasSection = 'stories';
+        state.entryFilter = 'all';
+        state.atlasSearch = '';
+        this.navigate('atlas');
+        if (entry) {
+          requestAnimationFrame(() => {
+            const card = document.querySelector<HTMLElement>(`[data-entry-id="${entry.id}"]`);
+            card?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            card?.focus({ preventScroll: true });
+          });
+        } else {
+          this.resetEntryModal();
+          openModal('modal-entry');
+        }
+        break;
+      }
       case 'signout':
         if (confirm('sign out?')) await signOut();
         break;
